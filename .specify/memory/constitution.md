@@ -1,50 +1,49 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+Version change: [NEW] -> 1.0.0
+Modified principles: 
+  - [PRINCIPLE_1_NAME] -> Local-First Execution
+  - [PRINCIPLE_2_NAME] -> Stability for Long Sessions
+  - [PRINCIPLE_3_NAME] -> Open-Source Extensibility
+  - [PRINCIPLE_4_NAME] -> Branch Strategy
+  - [PRINCIPLE_5_NAME] -> Commit Convention
+Added sections: Architecture & Performance Standards, Security & Moderation
+Removed sections: None
+Templates requiring updates: None currently, standard specs apply.
+Follow-up TODOs: None.
+-->
+# OBS Chat Aggregator Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Local-First Execution
+The architecture MUST prioritize local-first execution. The engine should run with low resources and minimal external API dependency, relying on direct stream URLs for realtime chat fusion where possible.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Stability for Long Sessions
+Stability is critical for extended broadcasting. The implementation MUST include an anti-memory-leak architecture and robust failure recovery/reconnection mechanisms to ensure continuous operation over long streaming sessions.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Open-Source Extensibility
+The platform MUST provide a flexible Connector Framework and OBS Plugin architecture. It should allow the open-source community to easily develop and integrate new platform extractors (e.g., via Playwright DOM mutation models).
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Branch Strategy (Non-Negotiable)
+Development MUST follow a strict branching model:
+- `main` branch is strictly reserved for stable releases.
+- `dev` branch is used for active development and integration.
+Feature branches should branch off `dev` and merge back into `dev`.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Commit Convention
+Commit messages MUST be brief, professional, and strictly contain NO emojis. They MUST follow Conventional Commits (e.g., `feat:`, `fix:`, `chore:`, `docs:`) to maintain a clean and readable project history.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Architecture & Performance Standards
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+The core extraction mechanism (including the WebSocket interception model and DOM mutation extraction) and the local overlay rendering engine MUST be highly optimized for OBS Studio compatibility. They should have minimal overhead to ensure stream encoding performance is not degraded.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Security & Moderation
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+A secure environment is required. The system MUST include a comprehensive moderation pipeline to filter unwanted content before it reaches the OBS overlay. The local overlay server design must adhere to strict security constraints to prevent unauthorized access.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This Constitution supersedes all other practices. All Pull Requests and code reviews MUST verify compliance with these core principles, particularly the branching strategy, commit conventions, and performance guidelines. Any proposed amendments to these principles require documentation and consensus before adoption.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-05-25 | **Last Amended**: 2026-05-25
