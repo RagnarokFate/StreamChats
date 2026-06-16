@@ -1,0 +1,134 @@
+:root {
+  --font-family: 'Inter', -apple-system, sans-serif;
+  
+  --bg-dark-glass: rgba(18, 18, 20, 0.75);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  
+  --color-twitch: #9146FF;
+  --color-youtube: #FF0000;
+  
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: transparent; /* Essential for OBS Browser Source */
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px;
+}
+
+/* Animations */
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideOutFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateX(-40px);
+  }
+}
+
+.animate-in {
+  animation: slideUpFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-out {
+  animation: slideOutFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Base Component Styles */
+.chat-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 450px;
+  max-height: 100%;
+  overflow-y: hidden;
+  /* Soft fade at the top of the feed */
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm), var(--shadow-glow);
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.chat-message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chat-message-platform {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.platform-twitch {
+  background-color: var(--color-twitch);
+  box-shadow: 0 0 8px var(--color-twitch);
+}
+
+.platform-youtube {
+  background-color: var(--color-youtube);
+  box-shadow: 0 0 8px var(--color-youtube);
+}
+
+.chat-message-author {
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+}
+
+.chat-message-text {
+  font-size: 1.05rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  word-wrap: break-word;
+}
