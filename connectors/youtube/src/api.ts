@@ -25,7 +25,7 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
   const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
   if (!apiKeyMatch) throw new Error('API Key not found');
   
-  const initialDataMatch = html.match(/var ytInitialData = ({.*?});<\/script>/);
+  const initialDataMatch = html.match(/var ytInitialData\s*=\s*(\{[\s\S]*?\});<\/script>/) || html.match(/window\["ytInitialData"\]\s*=\s*(\{[\s\S]*?\});/);
   if (!initialDataMatch) throw new Error('ytInitialData not found');
   
   try {
@@ -37,6 +37,8 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
     
     return { apiKey: apiKeyMatch[1], continuation };
   } catch (e) {
+    console.error('JSON parse error or missing token:', e);
+    // console.log('Snippet:', initialDataMatch[1].slice(0, 500)); // Uncomment to see
     throw new Error('Failed to parse initial data');
   }
 }
@@ -47,7 +49,7 @@ export async function fetchLiveChat(apiKey: string, continuation: string): Promi
     context: {
       client: {
         clientName: 'WEB',
-        clientVersion: '2.20231214.00.00'
+        clientVersion: '2.20260615.01.00'
       }
     },
     continuation

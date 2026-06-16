@@ -16,6 +16,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConnector = exports.ConnectorStatus = void 0;
 const events_1 = require("events");
+const logger_1 = require("./logger");
 var ConnectorStatus;
 (function (ConnectorStatus) {
     ConnectorStatus["IDLE"] = "IDLE";
@@ -34,16 +35,52 @@ __exportStar(require("./logger"), exports);
 class BaseConnector extends events_1.EventEmitter {
     status = ConnectorStatus.IDLE;
     options;
+    logger;
+    maxRetries;
+    reconnectCount = 0;
+    intentionallyStopped = false;
     constructor(options) {
         super();
         this.options = options;
+        this.maxRetries = options.maxRetries ?? 10;
+        this.logger = (0, logger_1.createLogger)({
+            connectorId: `${options.platform}:${options.channelId}`,
+            level: options.logLevel ?? 'info',
+            filePath: options.logFilePath
+        }, this);
     }
-    /**
-     * Forcefully tears down and restarts the connection.
-     */
+    async start() {
+        if (this.status === ConnectorStatus.CONNECTED || this.status === ConnectorStatus.CONNECTING || this.status === ConnectorStatus.WAITING) {
+            return;
+        }
+        this.intentionallyStopped = false;
+        this.setStatus(ConnectorStatus.CONNECTING);
+        this.logger.info(`Starting connection to ${this.options.platform} channel: ${this.options.channelId}`);
+        await this.connect();
+    }
+    async stop() {
+        this.intentionallyStopped = true;
+        this.setStatus(ConnectorStatus.IDLE);
+        this.logger.info('Stopping connection');
+        await this.disconnect();
+    }
+    async performReconnect() {
+        if (this.intentionallyStopped)
+            return;
+        if (this.reconnectCount >= this.maxRetries) {
+            this.logger.error(`Max retries (${this.maxRetries}) exhausted. Transitioning to ERROR.`);
+            this.dispatchError(new Error('Max retries exhausted'));
+            return;
+        }
+        this.reconnectCount++;
+        const backoffMs = Math.min(Math.pow(2, this.reconnectCount - 1) * 1000, 60000);
+        this.logger.warn(`Reconnecting in ${backoffMs}ms (Attempt ${this.reconnectCount}/${this.maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        await this.connect();
+    }
     async reconnect() {
         this.setStatus(ConnectorStatus.RECONNECTING);
-        await this.stop();
+        await this.disconnect();
         await this.performReconnect();
     }
     /**

@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { ChatEvent, Platform } from '@obs-chat/event-schema';
+import { createLogger, ConnectorLogger, LogLevel } from './logger';
 
 export enum ConnectorStatus {
   IDLE = 'IDLE',
@@ -16,6 +17,9 @@ export * from './logger';
 export interface ConnectorOptions {
   platform: Platform;
   channelId: string;
+  maxRetries?: number;
+  logLevel?: LogLevel;
+  logFilePath?: string;
 }
 
 /**
@@ -25,33 +29,65 @@ export interface ConnectorOptions {
 export abstract class BaseConnector extends EventEmitter {
   protected status: ConnectorStatus = ConnectorStatus.IDLE;
   protected options: ConnectorOptions;
+  protected logger: ConnectorLogger;
+  protected maxRetries: number;
+  protected reconnectCount: number = 0;
+  protected intentionallyStopped: boolean = false;
 
   constructor(options: ConnectorOptions) {
     super();
     this.options = options;
+    this.maxRetries = options.maxRetries ?? 10;
+    this.logger = createLogger({
+      connectorId: `${options.platform}:${options.channelId}`,
+      level: options.logLevel ?? 'info',
+      filePath: options.logFilePath
+    }, this);
   }
 
-  /**
-   * Initializes the extraction process (WebSocket or Playwright).
-   */
-  public abstract start(): Promise<void>;
+  public async start(): Promise<void> {
+    if (this.status === ConnectorStatus.CONNECTED || this.status === ConnectorStatus.CONNECTING || this.status === ConnectorStatus.WAITING) {
+      return;
+    }
+    
+    this.intentionallyStopped = false;
+    this.setStatus(ConnectorStatus.CONNECTING);
+    this.logger.info(`Starting connection to ${this.options.platform} channel: ${this.options.channelId}`);
+    
+    await this.connect();
+  }
 
-  /**
-   * Safely tears down resources.
-   */
-  public abstract stop(): Promise<void>;
+  public async stop(): Promise<void> {
+    this.intentionallyStopped = true;
+    this.setStatus(ConnectorStatus.IDLE);
+    this.logger.info('Stopping connection');
+    await this.disconnect();
+  }
 
-  /**
-   * Internal implementation for reconnect logic.
-   */
-  protected abstract performReconnect(): Promise<void>;
+  protected abstract connect(): Promise<void>;
+  protected abstract disconnect(): Promise<void>;
 
-  /**
-   * Forcefully tears down and restarts the connection.
-   */
+  protected async performReconnect(): Promise<void> {
+    if (this.intentionallyStopped) return;
+
+    if (this.reconnectCount >= this.maxRetries) {
+      this.logger.error(`Max retries (${this.maxRetries}) exhausted. Transitioning to ERROR.`);
+      this.dispatchError(new Error('Max retries exhausted'));
+      return;
+    }
+
+    this.reconnectCount++;
+    const backoffMs = Math.min(Math.pow(2, this.reconnectCount - 1) * 1000, 60000);
+    
+    this.logger.warn(`Reconnecting in ${backoffMs}ms (Attempt ${this.reconnectCount}/${this.maxRetries})`);
+    
+    await new Promise(resolve => setTimeout(resolve, backoffMs));
+    await this.connect();
+  }
+
   public async reconnect(): Promise<void> {
     this.setStatus(ConnectorStatus.RECONNECTING);
-    await this.stop();
+    await this.disconnect();
     await this.performReconnect();
   }
 

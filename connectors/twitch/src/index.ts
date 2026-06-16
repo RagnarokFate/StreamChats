@@ -5,76 +5,19 @@ import { parseIRCMessage, normalizeChatEvent } from './parser';
 
 export interface TwitchConnectorConfig extends ConnectorOptions {
   platform: 'twitch';
-  maxRetries?: number;
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
-  logFilePath?: string;
 }
 
 export class TwitchConnector extends BaseConnector {
   private ws: WebSocket | null = null;
-  private logger: ConnectorLogger;
-  private maxRetries: number;
-  private reconnectCount: number = 0;
   private resolvedChannelId: string;
-  private intentionallyStopped: boolean = false;
 
   constructor(config: TwitchConnectorConfig) {
     super(config);
-    this.maxRetries = config.maxRetries ?? 10;
-    
     const resolved = resolveInput(config.channelId);
     this.resolvedChannelId = resolved.channelId;
-    
-    this.logger = createLogger({
-      connectorId: `twitch:${this.resolvedChannelId}`,
-      level: config.logLevel ?? 'info',
-      filePath: config.logFilePath
-    }, this);
   }
 
-  public async start(): Promise<void> {
-    if (this.status === ConnectorStatus.CONNECTED || this.status === ConnectorStatus.CONNECTING) {
-      return;
-    }
-    
-    this.intentionallyStopped = false;
-    this.setStatus(ConnectorStatus.CONNECTING);
-    this.logger.info(`Starting connection to twitch channel: ${this.resolvedChannelId}`);
-    
-    await this.connectWs();
-  }
-
-  public async stop(): Promise<void> {
-    this.intentionallyStopped = true;
-    this.setStatus(ConnectorStatus.IDLE);
-    this.logger.info('Stopping connection');
-    
-    if (this.ws) {
-      this.ws.removeAllListeners();
-      this.ws.close();
-      this.ws = null;
-    }
-  }
-
-  protected async performReconnect(): Promise<void> {
-    if (this.intentionallyStopped) return;
-
-    if (this.reconnectCount >= this.maxRetries) {
-      this.logger.error(`Max retries (${this.maxRetries}) exhausted. Transitioning to ERROR.`);
-      this.dispatchError(new Error('Max retries exhausted'));
-      return;
-    }
-
-    this.reconnectCount++;
-    const backoffMs = Math.min(Math.pow(2, this.reconnectCount - 1) * 1000, 60000);
-    
-    this.logger.warn(`Reconnecting in ${backoffMs}ms (Attempt ${this.reconnectCount}/${this.maxRetries})`);
-    
-    await new Promise(resolve => setTimeout(resolve, backoffMs));
-    await this.connectWs();
-  }
-
-  private connectWs(): Promise<void> {
+  protected connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
@@ -129,6 +72,14 @@ export class TwitchConnector extends BaseConnector {
         this.reconnect().catch(e => this.logger.error('Reconnect failed', { error: e.message }));
       }
     });
+  }
+
+  protected async disconnect(): Promise<void> {
+    if (this.ws) {
+      this.ws.removeAllListeners();
+      this.ws.close();
+      this.ws = null;
+    }
   }
 
   private handleMessage(message: string): void {
