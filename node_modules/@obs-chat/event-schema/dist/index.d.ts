@@ -256,3 +256,27 @@ export declare const ChatEventSchema: z.ZodObject<{
     };
 }>;
 export type ChatEvent = z.infer<typeof ChatEventSchema>;
+export declare const ModerationEventSchema: z.ZodObject<{
+    eventId: z.ZodString;
+    platform: z.ZodEnum<["youtube", "twitch", "kick", "custom"]>;
+    timestamp: z.ZodString;
+} & {
+    type: z.ZodLiteral<"moderation">;
+    action: z.ZodEnum<["clear_chat", "timeout", "ban"]>;
+    targetUserId: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    type: "moderation";
+    eventId: string;
+    platform: "youtube" | "twitch" | "kick" | "custom";
+    timestamp: string;
+    action: "clear_chat" | "timeout" | "ban";
+    targetUserId?: string | undefined;
+}, {
+    type: "moderation";
+    eventId: string;
+    platform: "youtube" | "twitch" | "kick" | "custom";
+    timestamp: string;
+    action: "clear_chat" | "timeout" | "ban";
+    targetUserId?: string | undefined;
+}>;
+export type ModerationEvent = z.infer<typeof ModerationEventSchema>;

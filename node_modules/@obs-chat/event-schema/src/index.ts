@@ -56,3 +56,11 @@ export const ChatEventSchema = BaseEventSchema.extend({
   message: ChatMessageSchema,
 });
 export type ChatEvent = z.infer<typeof ChatEventSchema>;
+
+export const ModerationEventSchema = BaseEventSchema.extend({
+  type: z.literal('moderation'),
+  action: z.enum(['clear_chat', 'timeout', 'ban']),
+  targetUserId: z.string().optional(),
+});
+export type ModerationEvent = z.infer<typeof ModerationEventSchema>;
+

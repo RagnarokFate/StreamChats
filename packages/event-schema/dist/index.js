@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ChatEventSchema = exports.BaseEventSchema = exports.ChatMessageSchema = exports.ChatAuthorSchema = exports.MessageFragmentSchema = exports.TextFragmentSchema = exports.EmoteFragmentSchema = exports.PlatformSchema = void 0;
+exports.ModerationEventSchema = exports.ChatEventSchema = exports.BaseEventSchema = exports.ChatMessageSchema = exports.ChatAuthorSchema = exports.MessageFragmentSchema = exports.TextFragmentSchema = exports.EmoteFragmentSchema = exports.PlatformSchema = void 0;
 const zod_1 = require("zod");
 // Define the supported platforms
 exports.PlatformSchema = zod_1.z.enum(['youtube', 'twitch', 'kick', 'custom']);
@@ -43,4 +43,9 @@ exports.ChatEventSchema = exports.BaseEventSchema.extend({
     type: zod_1.z.literal('chat'),
     author: exports.ChatAuthorSchema,
     message: exports.ChatMessageSchema,
+});
+exports.ModerationEventSchema = exports.BaseEventSchema.extend({
+    type: zod_1.z.literal('moderation'),
+    action: zod_1.z.enum(['clear_chat', 'timeout', 'ban']),
+    targetUserId: zod_1.z.string().optional(),
 });
