@@ -6,8 +6,24 @@ import { ChatServer } from './server';
 async function bootstrap() {
   console.log('[App] Starting Local OBS Chat Server...');
 
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  let twitchChannel: string | null = null;
+  let youtubeChannel: string | null = null;
+  let port = 9090;
+
+  for (const arg of args) {
+    if (arg.startsWith('--twitch=')) {
+      twitchChannel = arg.substring('--twitch='.length);
+    } else if (arg.startsWith('--youtube=')) {
+      youtubeChannel = arg.substring('--youtube='.length);
+    } else if (arg.startsWith('--port=')) {
+      port = parseInt(arg.substring('--port='.length), 10);
+    }
+  }
+
   // 1. Start WebSocket Server
-  const server = new ChatServer(9090);
+  const server = new ChatServer(port);
 
   // 2. Initialize Moderation Pipeline
   const pipeline = new ModerationPipeline({
@@ -27,31 +43,42 @@ async function bootstrap() {
     server.broadcast(event);
   });
 
-  // 4. Initialize Connectors
-  const twitchConnector = new TwitchConnector({
-    platform: 'twitch',
-    channelId: 'skynews' // Arbitrary active 24/7 channel for default testing
-  });
+  // 4. Initialize Connectors based on CLI args
+  const promises: Promise<void>[] = [];
 
-  const ytConnector = new YouTubeConnector({
-    platform: 'youtube',
-    channelId: 'UC16niRr50-MSBwiO3YDb3RA' // BBC News Live
-  });
+  if (twitchChannel) {
+    console.log(`[App] Initializing Twitch Connector for channel: ${twitchChannel}`);
+    const twitchConnector = new TwitchConnector({
+      platform: 'twitch',
+      channelId: twitchChannel
+    });
+    pipeline.addConnector(twitchConnector);
+    promises.push(twitchConnector.start().catch(err => {
+      console.error('[App] Failed to start Twitch connector:', err.message);
+    }));
+  }
 
-  // 5. Link Connectors to Pipeline
-  pipeline.addConnector(twitchConnector);
-  pipeline.addConnector(ytConnector);
+  if (youtubeChannel) {
+    console.log(`[App] Initializing YouTube Connector for channel: ${youtubeChannel}`);
+    const ytConnector = new YouTubeConnector({
+      platform: 'youtube',
+      channelId: youtubeChannel
+    });
+    pipeline.addConnector(ytConnector);
+    promises.push(ytConnector.start().catch(err => {
+      console.error('[App] Failed to start YouTube connector:', err.message);
+    }));
+  }
 
-  // 6. Start Extractors
-  console.log('[App] Connecting to platforms...');
-  await Promise.all([
-    twitchConnector.start(),
-    ytConnector.start()
-  ]).catch(err => {
-    console.error('[App] Failed to start one or more connectors:', err);
-  });
+  // 5. Start Extractors
+  if (promises.length === 0) {
+    console.warn('[App] WARNING: No platforms configured. Please pass --twitch="<channel>" and/or --youtube="<channel>"');
+  } else {
+    console.log('[App] Connecting to platforms...');
+    await Promise.all(promises);
+  }
   
-  console.log('[App] Server fully operational. Awaiting OBS connections on ws://localhost:9090');
+  console.log(`[App] Server fully operational. Awaiting OBS connections on ws://localhost:${port}`);
 }
 
 bootstrap().catch(console.error);
