@@ -2,10 +2,22 @@
   "name": "@obs-chat/local-server",
   "version": "1.0.0",
   "private": true,
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "dev": "node index.js",
-    "build": "echo 'Build local server'"
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "ws": "^8.16.0",
+    "@obs-chat/connector-sdk": "*",
+    "@obs-chat/connector-twitch": "*",
+    "@obs-chat/connector-youtube": "*",
+    "@obs-chat/event-schema": "*",
+    "@obs-chat/moderation-pipeline": "*"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
+  }
 }
