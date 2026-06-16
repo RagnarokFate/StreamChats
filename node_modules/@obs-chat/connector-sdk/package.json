@@ -9,7 +9,8 @@
     "dev": "tsc -w"
   },
   "dependencies": {
-    "@obs-chat/event-schema": "*"
+    "@obs-chat/event-schema": "*",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

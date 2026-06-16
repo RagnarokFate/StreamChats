@@ -6,8 +6,10 @@ export declare enum ConnectorStatus {
     CONNECTED = "CONNECTED",
     PAUSED = "PAUSED",
     RECONNECTING = "RECONNECTING",
+    WAITING = "WAITING",
     ERROR = "ERROR"
 }
+export * from './logger';
 export interface ConnectorOptions {
     platform: Platform;
     channelId: string;

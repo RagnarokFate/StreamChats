@@ -18,10 +18,10 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project directories for `connectors/twitch` and `connectors/youtube`
-- [ ] T002 [P] Initialize package structure and `package.json` for `connectors/twitch`
-- [ ] T003 [P] Initialize package structure and `package.json` for `connectors/youtube`
-- [ ] T004 [P] Update root or workspace configurations to include the new `connectors/*` packages
+- [x] T001 Create project directories for `connectors/twitch` and `connectors/youtube`
+- [x] T002 [P] Initialize package structure and `package.json` for `connectors/twitch`
+- [x] T003 [P] Initialize package structure and `package.json` for `connectors/youtube`
+- [x] T004 [P] Update root or workspace configurations to include the new `connectors/*` packages
 
 ---
 
@@ -31,10 +31,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Install `pino` dependency in `packages/connector-sdk`
-- [ ] T006 Update `ConnectorStatus` enum to include `WAITING` state in `packages/connector-sdk/src/index.ts`
-- [ ] T007 Implement structured logger factory (`createLogger`) in `packages/connector-sdk/src/logger.ts`
-- [ ] T008 Export the new logger functionality from `packages/connector-sdk/src/index.ts`
+- [x] T005 Install `pino` dependency in `packages/connector-sdk`
+- [x] T006 Update `ConnectorStatus` enum to include `WAITING` state in `packages/connector-sdk/src/index.ts`
+- [x] T007 Implement structured logger factory (`createLogger`) in `packages/connector-sdk/src/logger.ts`
+- [x] T008 Export the new logger functionality from `packages/connector-sdk/src/index.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -48,11 +48,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Install `ws` dependency in `connectors/twitch`
-- [ ] T010 [P] [US1] Implement input resolution (`resolveInput`) in `connectors/twitch/src/utils.ts`
-- [ ] T011 [P] [US1] Implement IRC message parser and ChatEvent normalization in `connectors/twitch/src/parser.ts`
-- [ ] T012 [US1] Implement `TwitchConnector` class and lifecycle methods (`start`, `stop`, `getStatus`) in `connectors/twitch/src/index.ts`
-- [ ] T013 [US1] Implement `TwitchConnector` event emission (`chat_message`, `status_change`, `log`) in `connectors/twitch/src/index.ts`
+- [x] T009 [P] [US1] Install `ws` dependency in `connectors/twitch`
+- [x] T010 [P] [US1] Implement input resolution (`resolveInput`) in `connectors/twitch/src/utils.ts`
+- [x] T011 [P] [US1] Implement IRC message parser and ChatEvent normalization in `connectors/twitch/src/parser.ts`
+- [x] T012 [US1] Implement `TwitchConnector` class and lifecycle methods (`start`, `stop`, `getStatus`) in `connectors/twitch/src/index.ts`
+- [x] T013 [US1] Implement `TwitchConnector` event emission (`chat_message`, `status_change`, `log`) in `connectors/twitch/src/index.ts`
 
 **Checkpoint**: At this point, User Story 1 (Twitch Connector) should be fully functional and testable independently.
 
@@ -66,11 +66,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [P] [US2] Implement input resolution (extracting video ID from URL or channel handle) in `connectors/youtube/src/utils.ts`
-- [ ] T015 [P] [US2] Implement InnerTube API HTTP client (`/youtubei/v1/live_chat/get_live_chat`) in `connectors/youtube/src/api.ts`
-- [ ] T016 [P] [US2] Implement InnerTube response parser and ChatEvent normalization in `connectors/youtube/src/parser.ts`
-- [ ] T017 [US2] Implement `YouTubeConnector` class, HTTP polling loop, and token continuation in `connectors/youtube/src/index.ts`
-- [ ] T018 [US2] Implement `YouTubeConnector` event emission in `connectors/youtube/src/index.ts`
+- [x] T014 [P] [US2] Implement input resolution (extracting video ID from URL or channel handle) in `connectors/youtube/src/utils.ts`
+- [x] T015 [P] [US2] Implement InnerTube API HTTP client (`/youtubei/v1/live_chat/get_live_chat`) in `connectors/youtube/src/api.ts`
+- [x] T016 [P] [US2] Implement InnerTube response parser and ChatEvent normalization in `connectors/youtube/src/parser.ts`
+- [x] T017 [US2] Implement `YouTubeConnector` class, HTTP polling loop, and token continuation in `connectors/youtube/src/index.ts`
+- [x] T018 [US2] Implement `YouTubeConnector` event emission in `connectors/youtube/src/index.ts`
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently.
 
@@ -84,9 +84,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [P] [US3] Implement exponential backoff reconnection logic and max retry limits in `connectors/twitch/src/index.ts`
-- [ ] T020 [P] [US3] Implement exponential backoff reconnection logic and max retry limits in `connectors/youtube/src/index.ts`
-- [ ] T021 [US3] Implement end-of-stream detection and `WAITING` state periodic checks in `connectors/youtube/src/index.ts`
+- [x] T019 [P] [US3] Implement exponential backoff reconnection logic and max retry limits in `connectors/twitch/src/index.ts`
+- [x] T020 [P] [US3] Implement exponential backoff reconnection logic and max retry limits in `connectors/youtube/src/index.ts`
+- [x] T021 [US3] Implement end-of-stream detection and `WAITING` state periodic checks in `connectors/youtube/src/index.ts`
 
 ---
 
@@ -98,7 +98,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Implement configurable `pollIntervalMs` override in the polling loop of `connectors/youtube/src/index.ts`
+- [x] T022 [US4] Implement configurable `pollIntervalMs` override in the polling loop of `connectors/youtube/src/index.ts`
 
 ---
 
@@ -110,8 +110,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T023 [P] [US5] Implement `pause()` and `resume()` toggles for `TwitchConnector` in `connectors/twitch/src/index.ts`
-- [ ] T024 [P] [US5] Implement `pause()` and `resume()` toggles for `YouTubeConnector` in `connectors/youtube/src/index.ts`
+- [x] T023 [P] [US5] Implement `pause()` and `resume()` toggles for `TwitchConnector` in `connectors/twitch/src/index.ts`
+- [x] T024 [P] [US5] Implement `pause()` and `resume()` toggles for `YouTubeConnector` in `connectors/youtube/src/index.ts`
 
 ---
 
@@ -119,9 +119,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T025 [P] Ensure memory-aware operation (bounded event history limits, garbage collection) in both connectors
-- [ ] T026 Export all types and main classes correctly from package indices
-- [ ] T027 Run quickstart.md validation script against both connectors to ensure public API matches the spec
+- [x] T025 [P] Ensure memory-aware operation (bounded event history limits, garbage collection) in both connectors
+- [x] T026 Export all types and main classes correctly from package indices
+- [x] T027 Run quickstart.md validation script against both connectors to ensure public API matches the spec
 
 ---
 
