@@ -1,0 +1,9 @@
+{
+  "name": "@obs-chat/connector-twitch",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "@obs-chat/connector-sdk": "*"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "obs-chat-aggregator",
+  "version": "1.0.0",
+  "description": "OBS Multi-Platform Realtime Chat Aggregation Engine",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "connectors/*"
+  ]
+}
