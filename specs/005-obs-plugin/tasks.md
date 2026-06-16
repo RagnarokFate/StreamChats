@@ -8,7 +8,7 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project structure directory `plugins/obs/`
+- [x] T001 Create project structure directory `plugins/obs/`
 
 ---
 
@@ -18,8 +18,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 Create the main Lua script file `plugins/obs/obs-chat-aggregator.lua`
-- [ ] T003 Implement basic script description via `script_description()`
+- [x] T002 Create the main Lua script file `plugins/obs/obs-chat-aggregator.lua`
+- [x] T003 Implement basic script description via `script_description()`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -33,8 +33,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Implement `script_load()` in `plugins/obs/obs-chat-aggregator.lua` to spawn the `apps/local-server` Node.js instance in the background.
-- [ ] T005 [US1] Implement `script_unload()` in `plugins/obs/obs-chat-aggregator.lua` to properly terminate the spawned Node.js process, avoiding orphan processes.
+- [x] T004 [US1] Implement `script_load()` in `plugins/obs/obs-chat-aggregator.lua` to spawn the `apps/local-server` Node.js instance in the background.
+- [x] T005 [US1] Implement `script_unload()` in `plugins/obs/obs-chat-aggregator.lua` to properly terminate the spawned Node.js process, avoiding orphan processes.
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -48,9 +48,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Implement `script_properties()` in `plugins/obs/obs-chat-aggregator.lua` to add UI text inputs for Twitch Channel, YouTube Channel, and Server Port.
-- [ ] T007 [US2] Implement `script_update(settings)` in `plugins/obs/obs-chat-aggregator.lua` to extract and persist the user settings.
-- [ ] T008 [US2] Update the Node.js execution command in `script_load()`/`script_update()` to pass the configured `--twitch`, `--youtube`, and `--port` CLI arguments.
+- [x] T006 [US2] Implement `script_properties()` in `plugins/obs/obs-chat-aggregator.lua` to add UI text inputs for Twitch Channel, YouTube Channel, and Server Port.
+- [x] T007 [US2] Implement `script_update(settings)` in `plugins/obs/obs-chat-aggregator.lua` to extract and persist the user settings.
+- [x] T008 [US2] Update the Node.js execution command in `script_load()`/`script_update()` to pass the configured `--twitch`, `--youtube`, and `--port` CLI arguments.
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -60,8 +60,8 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T009 Create `plugins/obs/README.md` incorporating instructions from `quickstart.md`.
-- [ ] T010 Test cross-platform compatibility of the `os.execute` command used for spawning Node.js.
+- [x] T009 Create `plugins/obs/README.md` incorporating instructions from `quickstart.md`.
+- [x] T010 Test cross-platform compatibility of the `os.execute` command used for spawning Node.js.
 
 ---
 
