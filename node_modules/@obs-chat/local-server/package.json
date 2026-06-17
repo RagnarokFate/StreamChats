@@ -14,6 +14,8 @@
     "@obs-chat/connector-sdk": "*",
     "@obs-chat/connector-twitch": "*",
     "@obs-chat/connector-youtube": "*",
+    "@obs-chat/connector-kick": "*",
+    "@obs-chat/connector-tiktok": "*",
     "@obs-chat/event-schema": "*",
     "@obs-chat/moderation-pipeline": "*"
   },

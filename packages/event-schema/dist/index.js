@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ModerationEventSchema = exports.ChatEventSchema = exports.BaseEventSchema = exports.ChatMessageSchema = exports.ChatAuthorSchema = exports.MessageFragmentSchema = exports.TextFragmentSchema = exports.EmoteFragmentSchema = exports.PlatformSchema = void 0;
 const zod_1 = require("zod");
 // Define the supported platforms
-exports.PlatformSchema = zod_1.z.enum(['youtube', 'twitch', 'kick', 'custom']);
+exports.PlatformSchema = zod_1.z.enum(['youtube', 'twitch', 'kick', 'tiktok', 'custom']);
 // Represents an emote fragment inside a chat message
 exports.EmoteFragmentSchema = zod_1.z.object({
     type: zod_1.z.literal('emote'),

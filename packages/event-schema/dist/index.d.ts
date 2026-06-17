@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export declare const PlatformSchema: z.ZodEnum<["youtube", "twitch", "kick", "custom"]>;
+export declare const PlatformSchema: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
 export type Platform = z.infer<typeof PlatformSchema>;
 export declare const EmoteFragmentSchema: z.ZodObject<{
     type: z.ZodLiteral<"emote">;
@@ -125,20 +125,20 @@ export declare const ChatMessageSchema: z.ZodObject<{
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export declare const BaseEventSchema: z.ZodObject<{
     eventId: z.ZodString;
-    platform: z.ZodEnum<["youtube", "twitch", "kick", "custom"]>;
+    platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
     timestamp: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
 }, {
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
 }>;
 export declare const ChatEventSchema: z.ZodObject<{
     eventId: z.ZodString;
-    platform: z.ZodEnum<["youtube", "twitch", "kick", "custom"]>;
+    platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
     timestamp: z.ZodString;
 } & {
     type: z.ZodLiteral<"chat">;
@@ -223,7 +223,7 @@ export declare const ChatEventSchema: z.ZodObject<{
     };
     type: "chat";
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
     author: {
         id: string;
@@ -246,7 +246,7 @@ export declare const ChatEventSchema: z.ZodObject<{
     };
     type: "chat";
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
     author: {
         id: string;
@@ -258,7 +258,7 @@ export declare const ChatEventSchema: z.ZodObject<{
 export type ChatEvent = z.infer<typeof ChatEventSchema>;
 export declare const ModerationEventSchema: z.ZodObject<{
     eventId: z.ZodString;
-    platform: z.ZodEnum<["youtube", "twitch", "kick", "custom"]>;
+    platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
     timestamp: z.ZodString;
 } & {
     type: z.ZodLiteral<"moderation">;
@@ -267,14 +267,14 @@ export declare const ModerationEventSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     type: "moderation";
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
     action: "clear_chat" | "timeout" | "ban";
     targetUserId?: string | undefined;
 }, {
     type: "moderation";
     eventId: string;
-    platform: "youtube" | "twitch" | "kick" | "custom";
+    platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
     timestamp: string;
     action: "clear_chat" | "timeout" | "ban";
     targetUserId?: string | undefined;

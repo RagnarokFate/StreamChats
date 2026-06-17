@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Define the supported platforms
-export const PlatformSchema = z.enum(['youtube', 'twitch', 'kick', 'custom']);
+export const PlatformSchema = z.enum(['youtube', 'twitch', 'kick', 'tiktok', 'custom']);
 export type Platform = z.infer<typeof PlatformSchema>;
 
 // Represents an emote fragment inside a chat message

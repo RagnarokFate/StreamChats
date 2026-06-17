@@ -1,5 +1,7 @@
 import { TwitchConnector } from '@obs-chat/connector-twitch';
 import { YouTubeConnector } from '@obs-chat/connector-youtube';
+import { KickConnector } from '@obs-chat/connector-kick';
+import { TikTokConnector } from '@obs-chat/connector-tiktok';
 import { ModerationPipeline } from '@obs-chat/moderation-pipeline';
 import { ChatServer } from './server';
 
@@ -10,6 +12,8 @@ async function bootstrap() {
   const args = process.argv.slice(2);
   let twitchChannel: string | null = null;
   let youtubeChannel: string | null = null;
+  let kickChannel: string | null = null;
+  let tiktokChannel: string | null = null;
   let port = 9090;
 
   for (const arg of args) {
@@ -17,6 +21,10 @@ async function bootstrap() {
       twitchChannel = arg.substring('--twitch='.length);
     } else if (arg.startsWith('--youtube=')) {
       youtubeChannel = arg.substring('--youtube='.length);
+    } else if (arg.startsWith('--kick=')) {
+      kickChannel = arg.substring('--kick='.length);
+    } else if (arg.startsWith('--tiktok=')) {
+      tiktokChannel = arg.substring('--tiktok='.length);
     } else if (arg.startsWith('--port=')) {
       port = parseInt(arg.substring('--port='.length), 10);
     }
@@ -67,6 +75,30 @@ async function bootstrap() {
     pipeline.addConnector(ytConnector);
     promises.push(ytConnector.start().catch(err => {
       console.error('[App] Failed to start YouTube connector:', err.message);
+    }));
+  }
+
+  if (kickChannel) {
+    console.log(`[App] Initializing Kick Connector for channel: ${kickChannel}`);
+    const kickConnector = new KickConnector({
+      platform: 'kick',
+      channelId: kickChannel
+    });
+    pipeline.addConnector(kickConnector);
+    promises.push(kickConnector.start().catch(err => {
+      console.error('[App] Failed to start Kick connector:', err.message);
+    }));
+  }
+
+  if (tiktokChannel) {
+    console.log(`[App] Initializing TikTok Connector for channel: ${tiktokChannel}`);
+    const tiktokConnector = new TikTokConnector({
+      platform: 'tiktok',
+      channelId: tiktokChannel
+    });
+    pipeline.addConnector(tiktokConnector);
+    promises.push(tiktokConnector.start().catch(err => {
+      console.error('[App] Failed to start TikTok connector:', err.message);
     }));
   }
 
