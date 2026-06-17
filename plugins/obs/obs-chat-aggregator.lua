@@ -25,6 +25,11 @@ function script_properties()
     obs.obs_properties_add_text(props, "twitch_channel", "Twitch Channel", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_text(props, "youtube_channel", "YouTube Channel", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_int(props, "server_port", "Server Port", 1024, 65535, 1)
+    obs.obs_properties_add_button(props, "connect_button", "Connect / Apply", function()
+        stop_server()
+        start_server()
+        return true
+    end)
     return props
 end
 
@@ -36,11 +41,6 @@ function script_update(settings)
     twitch_channel = obs.obs_data_get_string(settings, "twitch_channel")
     youtube_channel = obs.obs_data_get_string(settings, "youtube_channel")
     server_port = obs.obs_data_get_int(settings, "server_port")
-    
-    if is_running then
-        stop_server()
-        start_server()
-    end
 end
 
 function start_server()
