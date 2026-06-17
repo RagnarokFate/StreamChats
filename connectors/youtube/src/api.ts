@@ -30,8 +30,8 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
   
   try {
     const data = JSON.parse(initialDataMatch[1]);
-    const continuation = data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.header?.liveChatHeaderRenderer?.viewSelector?.sortFilterSubMenuRenderer?.subMenuItems?.[1]?.continuation?.reloadContinuationData?.continuation 
-      || data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation;
+    const continuation = data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation 
+      || data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.header?.liveChatHeaderRenderer?.viewSelector?.sortFilterSubMenuRenderer?.subMenuItems?.[1]?.continuation?.reloadContinuationData?.continuation;
       
     if (!continuation) throw new Error('Continuation token not found');
     
