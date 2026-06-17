@@ -34,6 +34,8 @@ function script_properties()
 end
 
 function script_defaults(settings)
+    obs.obs_data_set_default_string(settings, "twitch_channel", "ragnarokfate")
+    obs.obs_data_set_default_string(settings, "youtube_channel", "@RagnarokFate")
     obs.obs_data_set_default_int(settings, "server_port", 9090)
 end
 
