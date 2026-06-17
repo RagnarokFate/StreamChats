@@ -46,7 +46,18 @@ As a streamer, I want to configure my Twitch and YouTube channel connections dir
 - **FR-002**: System MUST host or manage the lifecycle of the Local Overlay Server, starting it when OBS starts and terminating it when OBS closes.
 - **FR-003**: System MUST provide a configuration UI within OBS for users to input their Twitch and YouTube channel IDs.
 - **FR-004**: System MUST instruct the Connector Framework to start chat extraction based on the user-configured channels.
-- **FR-005**: System MUST ensure the chat overlay renders with a transparent background in the OBS Browser Source.
+- **FR-005**: System MUST ensure the chat overlay renders with a transparent background in the OBS Browser Source (e.g. using `body { background-color: transparent !important; }`).
+
+### Non-Functional & Edge Case Requirements
+
+- **NFR-001**: The plugin MUST use OS-specific background process execution techniques (`start /B` on Windows, `&` on macOS/Linux) to avoid blocking the OBS thread.
+- **NFR-002**: Input Validation: The UI MUST trim whitespace from channel IDs and restrict them to alphanumeric/standard URL characters (max 255 chars).
+- **NFR-003**: Orphan/Zombie Prevention: If OBS terminates abruptly, the Node.js process MUST automatically exit (e.g. by polling for parent process ID or shutting down on STDIN closure).
+- **NFR-004**: Port Conflicts: If the selected `server_port` is in use, the plugin MUST log an error in the OBS script log and fail gracefully instead of crashing.
+- **NFR-005**: Disconnect Recovery: The frontend Overlay UI MUST automatically attempt to reconnect to the WebSocket every 5 seconds if the connection drops.
+- **NFR-006**: Node Crash Recovery: If the Node.js process crashes, the user can manually restart it using the "Connect / Apply" button in the OBS UI.
+- **NFR-007**: Security: Channel IDs are stored in plain text in the local OBS `.json` profile data, which is acceptable as they are public data. No tokens are stored.
+- **NFR-008**: Graceful Shutdown: "Gracefully manage" means sending a standard termination signal (`SIGTERM` on Unix, or `wmic call terminate` on Windows) and allowing up to 1000ms before forceful cleanup.
 
 ### Key Entities *(include if feature involves data)*
 
