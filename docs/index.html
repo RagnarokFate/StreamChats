@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamChats — Multi-Platform Chat Overlay for OBS</title>
+  <meta name="description" content="Aggregate Twitch, YouTube, Kick, and TikTok live chat into a single beautiful overlay for OBS Studio. Open source, local-first, and fully customizable." />
+  <meta name="keywords" content="OBS, chat overlay, Twitch, YouTube, Kick, TikTok, streaming, live chat, aggregator" />
+  <meta name="author" content="RagnarokFate" />
+  <meta property="og:title" content="StreamChats — Multi-Platform Chat Overlay for OBS" />
+  <meta property="og:description" content="Aggregate Twitch, YouTube, Kick, and TikTok live chat into a single beautiful overlay for OBS Studio." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ======== HERO ======== -->
+  <header class="hero" id="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-badge">Open Source &bull; Local-First &bull; Zero Config</div>
+      <h1 class="hero-title">
+        Stream<span class="gradient-text">Chats</span>
+      </h1>
+      <p class="hero-subtitle">
+        Aggregate <strong>Twitch</strong>, <strong>YouTube</strong>, <strong>Kick</strong>, and <strong>TikTok</strong> live chat into a single stunning overlay for OBS Studio.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/RagnarokFate/StreamChats" class="btn btn-primary" id="btn-github">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+        <a href="#themes" class="btn btn-secondary" id="btn-themes">
+          Browse Themes
+        </a>
+      </div>
+    </div>
+    <div class="hero-demo">
+      <div class="demo-window">
+        <div class="demo-titlebar">
+          <span class="demo-dot red"></span>
+          <span class="demo-dot yellow"></span>
+          <span class="demo-dot green"></span>
+          <span class="demo-titlebar-text">OBS Browser Source — localhost:9090</span>
+        </div>
+        <div class="demo-chat">
+          <div class="demo-msg animate-demo-1">
+            <span class="demo-platform twitch"></span>
+            <span class="demo-author">RagnarokFate</span>
+            <span class="demo-text">Welcome to the stream! 🎮</span>
+          </div>
+          <div class="demo-msg animate-demo-2">
+            <span class="demo-platform youtube"></span>
+            <span class="demo-author">StreamViewer42</span>
+            <span class="demo-text">This overlay looks amazing!</span>
+          </div>
+          <div class="demo-msg animate-demo-3">
+            <span class="demo-platform kick"></span>
+            <span class="demo-author">KickFan_99</span>
+            <span class="demo-text">Hey everyone, what did I miss?</span>
+          </div>
+          <div class="demo-msg animate-demo-4">
+            <span class="demo-platform tiktok"></span>
+            <span class="demo-author">TikTokLive</span>
+            <span class="demo-text">Love the multi-platform support! 🔥</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======== PLATFORMS ======== -->
+  <section class="section" id="platforms">
+    <div class="container">
+      <h2 class="section-title">All Your Chats, <span class="gradient-text">One Overlay</span></h2>
+      <p class="section-subtitle">Connect to the platforms your viewers use. Every message, every platform, one unified feed.</p>
+      <div class="platform-grid">
+        <div class="platform-card" id="card-twitch">
+          <div class="platform-icon twitch-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+          </div>
+          <h3>Twitch</h3>
+          <p>IRC WebSocket connection with full badge and emote support.</p>
+        </div>
+        <div class="platform-card" id="card-youtube">
+          <div class="platform-icon youtube-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12z"/></svg>
+          </div>
+          <h3>YouTube</h3>
+          <p>Live chat polling with support for Super Chats and memberships.</p>
+        </div>
+        <div class="platform-card" id="card-kick">
+          <div class="platform-icon kick-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M2 2v20h6v-6l4-4 4 10h6L15 6l7-6h-8l-6 6V2z"/></svg>
+          </div>
+          <h3>Kick</h3>
+          <p>Real-time connection via Pusher WebSocket protocol.</p>
+        </div>
+        <div class="platform-card" id="card-tiktok">
+          <div class="platform-icon tiktok-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+          </div>
+          <h3>TikTok</h3>
+          <p>Live stream chat and gift events via protobuf WebSocket.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== FEATURES ======== -->
+  <section class="section section-dark" id="features">
+    <div class="container">
+      <h2 class="section-title">Built for <span class="gradient-text">Streamers</span></h2>
+      <div class="features-grid">
+        <div class="feature-card" id="feat-local">
+          <div class="feature-icon">🏠</div>
+          <h3>100% Local</h3>
+          <p>No cloud services, no accounts, no API keys. Everything runs on your machine.</p>
+        </div>
+        <div class="feature-card" id="feat-moderation">
+          <div class="feature-icon">🛡️</div>
+          <h3>Built-in Moderation</h3>
+          <p>Profanity filter and banned-word censoring keep your overlay clean.</p>
+        </div>
+        <div class="feature-card" id="feat-themes">
+          <div class="feature-icon">🎨</div>
+          <h3>9 Overlay Themes</h3>
+          <p>From cyberpunk neon to retro pixel art — pick the style that matches your brand.</p>
+        </div>
+        <div class="feature-card" id="feat-obs">
+          <div class="feature-icon">🎬</div>
+          <h3>Native OBS Plugin</h3>
+          <p>Configure everything from within OBS Studio. No terminal needed.</p>
+        </div>
+        <div class="feature-card" id="feat-extensible">
+          <div class="feature-icon">🔌</div>
+          <h3>Extensible SDK</h3>
+          <p>Add new platforms by implementing a single BaseConnector class.</p>
+        </div>
+        <div class="feature-card" id="feat-performance">
+          <div class="feature-icon">⚡</div>
+          <h3>Lightweight</h3>
+          <p>Under 2% CPU overhead. Built for marathon streaming sessions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== THEMES ======== -->
+  <section class="section" id="themes">
+    <div class="container">
+      <h2 class="section-title">Choose Your <span class="gradient-text">Style</span></h2>
+      <p class="section-subtitle">Select a theme via URL parameter: <code>http://localhost:9090/?theme=neon</code></p>
+      <div class="themes-grid">
+        <div class="theme-card" id="theme-glass">
+          <div class="theme-preview glass-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Glass</h3>
+          <p>Premium frosted glassmorphism</p>
+        </div>
+        <div class="theme-card" id="theme-minimal">
+          <div class="theme-preview minimal-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Minimal</h3>
+          <p>Clean and borderless</p>
+        </div>
+        <div class="theme-card" id="theme-neon">
+          <div class="theme-preview neon-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Neon</h3>
+          <p>Cyberpunk glow</p>
+        </div>
+        <div class="theme-card" id="theme-classic">
+          <div class="theme-preview classic-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Classic</h3>
+          <p>Solid Twitch-style</p>
+        </div>
+        <div class="theme-card" id="theme-retro">
+          <div class="theme-preview retro-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Retro</h3>
+          <p>8-bit pixel art</p>
+        </div>
+        <div class="theme-card" id="theme-bubble">
+          <div class="theme-preview bubble-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Bubble</h3>
+          <p>Messaging bubbles</p>
+        </div>
+        <div class="theme-card" id="theme-holographic">
+          <div class="theme-preview holo-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Holographic</h3>
+          <p>Iridescent gradients</p>
+        </div>
+        <div class="theme-card" id="theme-comic">
+          <div class="theme-preview comic-preview">
+            <div class="theme-msg"><span class="t-author">Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Comic</h3>
+          <p>Bold outlines &amp; shadows</p>
+        </div>
+        <div class="theme-card" id="theme-terminal">
+          <div class="theme-preview terminal-preview">
+            <div class="theme-msg"><span class="t-author">&gt; Viewer</span> Hello! 👋</div>
+          </div>
+          <h3>Terminal</h3>
+          <p>Hacker aesthetic</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== QUICKSTART ======== -->
+  <section class="section section-dark" id="quickstart">
+    <div class="container">
+      <h2 class="section-title">Get Started in <span class="gradient-text">3 Steps</span></h2>
+      <div class="steps">
+        <div class="step" id="step-1">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install</h3>
+            <code class="step-code">git clone &amp;&amp; npm install &amp;&amp; npm run build --workspaces</code>
+          </div>
+        </div>
+        <div class="step" id="step-2">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Load Script in OBS</h3>
+            <p>Tools → Scripts → Add <code>obs-chat-aggregator.lua</code></p>
+          </div>
+        </div>
+        <div class="step" id="step-3">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Add Browser Source</h3>
+            <p>Point to <code>http://localhost:9090/?theme=glass</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== FOOTER ======== -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <p>StreamChats &mdash; Open Source &bull; MIT License</p>
+      <p class="footer-sub">Built with ❤️ by <a href="https://github.com/RagnarokFate" class="footer-link">RagnarokFate</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Simple scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.platform-card, .feature-card, .theme-card, .step').forEach(el => {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

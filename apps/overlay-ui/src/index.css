@@ -1,18 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Press+Start+2P&family=Fira+Code:wght@400;600&family=Bangers&display=swap');
+
+/* ============================================================
+   BASE DESIGN TOKENS
+   ============================================================ */
 :root {
   --font-family: 'Inter', -apple-system, sans-serif;
-  
+
   --bg-dark-glass: rgba(18, 18, 20, 0.75);
   --border-glass: rgba(255, 255, 255, 0.1);
   --text-primary: #ffffff;
   --text-secondary: #e0e0e0;
-  
+
   --color-twitch: #9146FF;
   --color-youtube: #FF0000;
-  
+  --color-kick: #53FC18;
+  --color-tiktok: #EE1D52;
+
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-glow: 0 0 15px rgba(255, 255, 255, 0.05);
+
+  --msg-bg: var(--bg-dark-glass);
+  --msg-border: 1px solid var(--border-glass);
+  --msg-radius: 12px;
+  --msg-padding: 12px 16px;
+  --msg-shadow: var(--shadow-sm), var(--shadow-glow);
+  --msg-backdrop: blur(12px);
+  --msg-font: var(--font-family);
+  --msg-author-size: 0.9rem;
+  --msg-text-size: 1.05rem;
+  --feed-gap: 12px;
 }
 
+/* ============================================================
+   RESET & GLOBAL
+   ============================================================ */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -20,7 +41,7 @@
 }
 
 body {
-  font-family: var(--font-family);
+  font-family: var(--msg-font);
   background-color: transparent; /* Essential for OBS Browser Source */
   color: var(--text-primary);
   overflow: hidden;
@@ -37,7 +58,9 @@ body {
   padding: 24px;
 }
 
-/* Animations */
+/* ============================================================
+   ANIMATIONS (shared across themes)
+   ============================================================ */
 @keyframes slideUpFadeIn {
   from {
     opacity: 0;
@@ -60,6 +83,33 @@ body {
   }
 }
 
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--neon-glow), 0 0 20px var(--neon-glow), inset 0 0 12px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 14px var(--neon-glow), 0 0 35px var(--neon-glow), inset 0 0 12px rgba(0,0,0,0.4); }
+}
+
+@keyframes holoShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes terminalBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes typeIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
 .animate-in {
   animation: slideUpFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -68,11 +118,13 @@ body {
   animation: slideOutFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Base Component Styles */
+/* ============================================================
+   CHAT FEED (base layout)
+   ============================================================ */
 .chat-feed {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--feed-gap);
   width: 100%;
   max-width: 450px;
   max-height: 100%;
@@ -82,16 +134,19 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
 }
 
+/* ============================================================
+   CHAT MESSAGE (base component)
+   ============================================================ */
 .chat-message {
   display: flex;
   flex-direction: column;
-  background: var(--bg-dark-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: var(--shadow-sm), var(--shadow-glow);
+  background: var(--msg-bg);
+  backdrop-filter: var(--msg-backdrop);
+  -webkit-backdrop-filter: var(--msg-backdrop);
+  border: var(--msg-border);
+  border-radius: var(--msg-radius);
+  padding: var(--msg-padding);
+  box-shadow: var(--msg-shadow);
   transform-origin: left center;
   will-change: transform, opacity;
 }
@@ -101,7 +156,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
-  font-size: 0.9rem;
+  font-size: var(--msg-author-size);
   font-weight: 600;
 }
 
@@ -121,14 +176,422 @@ body {
   box-shadow: 0 0 8px var(--color-youtube);
 }
 
+.platform-kick {
+  background-color: var(--color-kick);
+  box-shadow: 0 0 8px var(--color-kick);
+}
+
+.platform-tiktok {
+  background-color: var(--color-tiktok);
+  box-shadow: 0 0 8px var(--color-tiktok);
+}
+
+.platform-custom {
+  background-color: #888;
+  box-shadow: 0 0 8px #888;
+}
+
 .chat-message-author {
   color: var(--text-primary);
   letter-spacing: 0.3px;
 }
 
 .chat-message-text {
-  font-size: 1.05rem;
+  font-size: var(--msg-text-size);
   line-height: 1.4;
   color: var(--text-secondary);
   word-wrap: break-word;
+}
+
+/* ============================================================
+   THEME 1: GLASS (Default)
+   The existing premium glassmorphism look. No overrides needed,
+   since it's the base design.
+   ============================================================ */
+[data-theme="glass"] {
+  /* Uses default :root variables — no overrides required */
+}
+
+/* ============================================================
+   THEME 2: MINIMAL
+   Clean, borderless text on a fully transparent background.
+   ============================================================ */
+[data-theme="minimal"] .chat-message {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 6px 0;
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  padding-left: 12px;
+}
+
+[data-theme="minimal"] .chat-message-platform {
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+}
+
+[data-theme="minimal"] .chat-message-author {
+  font-weight: 700;
+  opacity: 0.7;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+[data-theme="minimal"] .chat-message-text {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ============================================================
+   THEME 3: NEON
+   Cyberpunk aesthetics with glowing borders and vibrant text.
+   ============================================================ */
+[data-theme="neon"] {
+  --neon-glow: #00f0ff;
+}
+
+[data-theme="neon"] .chat-message {
+  background: rgba(0, 0, 15, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--neon-glow);
+  border-radius: 4px;
+  box-shadow: 0 0 8px var(--neon-glow), 0 0 20px var(--neon-glow), inset 0 0 12px rgba(0, 0, 0, 0.4);
+  animation: slideUpFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, neonPulse 3s ease-in-out infinite;
+}
+
+[data-theme="neon"] .chat-message.animate-out {
+  animation: slideOutFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="neon"] .chat-message-author {
+  color: var(--neon-glow);
+  text-shadow: 0 0 8px var(--neon-glow);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+[data-theme="neon"] .chat-message-text {
+  color: #e0ffff;
+  text-shadow: 0 0 2px rgba(0, 240, 255, 0.3);
+}
+
+[data-theme="neon"] .chat-message-platform {
+  box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+}
+
+/* ============================================================
+   THEME 4: CLASSIC
+   Solid, opaque message blocks similar to default Twitch chat.
+   ============================================================ */
+[data-theme="classic"] .chat-feed {
+  gap: 2px;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+[data-theme="classic"] .chat-message {
+  background: rgba(24, 24, 27, 0.95);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  padding: 8px 12px;
+  box-shadow: none;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+
+[data-theme="classic"] .chat-message-header {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+[data-theme="classic"] .chat-message-platform {
+  width: 8px;
+  height: 8px;
+  box-shadow: none;
+}
+
+[data-theme="classic"] .chat-message-author {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+[data-theme="classic"] .chat-message-author::after {
+  content: ':';
+}
+
+[data-theme="classic"] .chat-message-text {
+  font-size: 0.95rem;
+  color: #d4d4d8;
+}
+
+/* ============================================================
+   THEME 5: RETRO
+   8-bit / pixel-art style aesthetic with blocky borders.
+   ============================================================ */
+[data-theme="retro"] {
+  --retro-bg: rgba(20, 12, 28, 0.9);
+  --retro-border: #ffcc00;
+  --retro-text: #ffcc00;
+}
+
+[data-theme="retro"] .chat-message {
+  font-family: 'Press Start 2P', monospace;
+  background: var(--retro-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 3px solid var(--retro-border);
+  border-radius: 0;
+  padding: 10px 12px;
+  box-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.6),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+  image-rendering: pixelated;
+}
+
+[data-theme="retro"] .chat-message-platform {
+  border-radius: 0;
+  width: 8px;
+  height: 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="retro"] .chat-message-author {
+  color: var(--retro-text);
+  font-size: 0.55rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+[data-theme="retro"] .chat-message-text {
+  font-size: 0.6rem;
+  line-height: 1.8;
+  color: #e8e8e8;
+}
+
+[data-theme="retro"] .chat-feed {
+  gap: 10px;
+}
+
+/* ============================================================
+   THEME 6: BUBBLE
+   Rounded messaging bubbles reminiscent of iMessage/WhatsApp.
+   ============================================================ */
+[data-theme="bubble"] .chat-message {
+  background: linear-gradient(135deg, rgba(88, 86, 214, 0.8), rgba(52, 120, 246, 0.8));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
+  border-radius: 20px 20px 20px 6px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  max-width: 85%;
+}
+
+[data-theme="bubble"] .chat-message:nth-child(even) {
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.8), rgba(48, 176, 80, 0.8));
+  border-radius: 20px 20px 6px 20px;
+  align-self: flex-end;
+}
+
+[data-theme="bubble"] .chat-message-platform {
+  width: 8px;
+  height: 8px;
+  box-shadow: none;
+}
+
+[data-theme="bubble"] .chat-message-author {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+[data-theme="bubble"] .chat-message-text {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+[data-theme="bubble"] .chat-feed {
+  gap: 8px;
+}
+
+/* ============================================================
+   THEME 7: HOLOGRAPHIC
+   Animated iridescent gradient backgrounds.
+   ============================================================ */
+[data-theme="holographic"] .chat-message {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 0, 128, 0.3),
+    rgba(0, 200, 255, 0.3),
+    rgba(128, 0, 255, 0.3),
+    rgba(0, 255, 128, 0.3),
+    rgba(255, 200, 0, 0.3)
+  );
+  background-size: 400% 400%;
+  animation: slideUpFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, holoShift 8s ease infinite;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="holographic"] .chat-message.animate-out {
+  animation: slideOutFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="holographic"] .chat-message-author {
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff6ec7, #7873f5, #4fc3f7);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 0.85rem;
+}
+
+[data-theme="holographic"] .chat-message-text {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="holographic"] .chat-message-platform {
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* ============================================================
+   THEME 8: COMIC
+   Comic book style with bold black outlines and offset shadows.
+   ============================================================ */
+[data-theme="comic"] {
+  --comic-bg: #fffde7;
+  --comic-border: #1a1a2e;
+  --comic-text: #1a1a2e;
+  --comic-author: #d32f2f;
+}
+
+[data-theme="comic"] .chat-message {
+  font-family: 'Bangers', cursive;
+  background: var(--comic-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 3px solid var(--comic-border);
+  border-radius: 18px 18px 18px 4px;
+  padding: 10px 14px;
+  box-shadow:
+    5px 5px 0 var(--comic-border),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+[data-theme="comic"] .chat-message::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 16px;
+  width: 16px;
+  height: 16px;
+  background: var(--comic-bg);
+  border-right: 3px solid var(--comic-border);
+  border-bottom: 3px solid var(--comic-border);
+  transform: rotate(45deg);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+[data-theme="comic"] .chat-message-platform {
+  box-shadow: none;
+  border: 2px solid var(--comic-border);
+}
+
+[data-theme="comic"] .chat-message-author {
+  color: var(--comic-author);
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+[data-theme="comic"] .chat-message-text {
+  color: var(--comic-text);
+  font-family: 'Bangers', cursive;
+  font-size: 1.15rem;
+  letter-spacing: 0.8px;
+  line-height: 1.3;
+}
+
+[data-theme="comic"] .chat-feed {
+  gap: 18px;
+}
+
+/* ============================================================
+   THEME 9: TERMINAL
+   Monospace font, green on black, hacker aesthetic.
+   ============================================================ */
+[data-theme="terminal"] {
+  --term-green: #00ff41;
+  --term-bg: rgba(0, 0, 0, 0.92);
+  --term-dim: rgba(0, 255, 65, 0.6);
+}
+
+[data-theme="terminal"] .chat-message {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  background: var(--term-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  border-left: 3px solid var(--term-green);
+  border-radius: 0;
+  padding: 8px 12px;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.05);
+}
+
+[data-theme="terminal"] .chat-message-platform {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background-color: var(--term-green) !important;
+  box-shadow: 0 0 4px var(--term-green) !important;
+}
+
+[data-theme="terminal"] .chat-message-header {
+  gap: 6px;
+}
+
+[data-theme="terminal"] .chat-message-author {
+  color: var(--term-green);
+  font-weight: 400;
+  font-size: 0.8rem;
+  text-shadow: 0 0 6px var(--term-green);
+}
+
+[data-theme="terminal"] .chat-message-author::before {
+  content: '>';
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
+[data-theme="terminal"] .chat-message-text {
+  color: var(--term-dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+[data-theme="terminal"] .chat-feed {
+  gap: 4px;
+}
+
+[data-theme="terminal"] .animate-in {
+  animation: slideUpFadeIn 0.2s ease-out forwards;
 }

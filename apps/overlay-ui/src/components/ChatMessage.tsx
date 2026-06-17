@@ -23,7 +23,13 @@ export function ChatMessage({ message, onAnimationComplete }: Props) {
     }
   };
 
-  const platformClass = message.platform === 'twitch' ? 'platform-twitch' : 'platform-youtube';
+  const platformClassMap: Record<string, string> = {
+    twitch: 'platform-twitch',
+    youtube: 'platform-youtube',
+    kick: 'platform-kick',
+    tiktok: 'platform-tiktok',
+  };
+  const platformClass = platformClassMap[message.platform] || 'platform-custom';
 
   return (
     <div 
