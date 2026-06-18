@@ -61,7 +61,7 @@ async function bootstrap() {
       channelId: twitchChannel
     });
     pipeline.addConnector(twitchConnector);
-    promises.push(twitchConnector.start().catch(err => {
+    promises.push(twitchConnector.start().catch((err: any) => {
       console.error('[App] Failed to start Twitch connector:', err.message);
     }));
   }
@@ -73,7 +73,7 @@ async function bootstrap() {
       channelId: youtubeChannel
     });
     pipeline.addConnector(ytConnector);
-    promises.push(ytConnector.start().catch(err => {
+    promises.push(ytConnector.start().catch((err: any) => {
       console.error('[App] Failed to start YouTube connector:', err.message);
     }));
   }
@@ -85,7 +85,7 @@ async function bootstrap() {
       channelId: kickChannel
     });
     pipeline.addConnector(kickConnector);
-    promises.push(kickConnector.start().catch(err => {
+    promises.push(kickConnector.start().catch((err: any) => {
       console.error('[App] Failed to start Kick connector:', err.message);
     }));
   }
@@ -97,7 +97,7 @@ async function bootstrap() {
       channelId: tiktokChannel
     });
     pipeline.addConnector(tiktokConnector);
-    promises.push(tiktokConnector.start().catch(err => {
+    promises.push(tiktokConnector.start().catch((err: any) => {
       console.error('[App] Failed to start TikTok connector:', err.message);
     }));
   }
