@@ -10,8 +10,20 @@ function getTheme(): string {
 }
 
 function App() {
-  const messages = useChatFeed('ws://localhost:9090');
+  const isReaderMode = new URLSearchParams(window.location.search).get('reader') === 'true' || parseInt(window.location.port) % 2 !== 0; // simplistic check, if port is 9091
+  
   const theme = getTheme();
+  
+  if (isReaderMode) {
+    document.body.setAttribute('data-reader', 'true');
+    document.body.setAttribute('data-theme', theme);
+  }
+
+  // If we are on port 9091, connect to 9090
+  const portStr = window.location.port;
+  const wsPort = (portStr && isReaderMode) ? String(parseInt(portStr) - 1) : (portStr || '9090');
+  
+  const messages = useChatFeed(`ws://${window.location.hostname || 'localhost'}:${wsPort}`);
 
   return (
     <div data-theme={theme}>

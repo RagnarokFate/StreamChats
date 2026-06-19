@@ -7,13 +7,13 @@ import * as path from 'path';
 export class ChatServer {
   private wss: WebSocketServer;
   private httpServer: http.Server;
+  private readerHttpServer: http.Server;
   private port: number;
 
   constructor(port: number = 9090) {
     this.port = port;
 
-    // Create an HTTP server to serve the static Vite UI
-    this.httpServer = http.createServer((req, res) => {
+    const requestHandler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       // Resolve the path to the overlay-ui/dist folder
       const distPath = path.resolve(__dirname, '../../overlay-ui/dist');
       
@@ -52,9 +52,15 @@ export class ChatServer {
           res.end(data);
         });
       });
-    });
+    };
 
-    // Attach the WebSocket server to the HTTP server
+    // Create primary HTTP server for OBS Browser Source
+    this.httpServer = http.createServer(requestHandler);
+
+    // Create secondary HTTP server for Streamer Reader Mode
+    this.readerHttpServer = http.createServer(requestHandler);
+
+    // Attach the WebSocket server to the primary HTTP server
     this.wss = new WebSocketServer({ server: this.httpServer });
 
     this.wss.on('connection', (ws: WebSocket) => {
@@ -70,8 +76,14 @@ export class ChatServer {
     });
 
     this.httpServer.listen(this.port, () => {
-      console.log(`[ChatServer] HTTP and WebSocket listening on port ${this.port}`);
-      console.log(`[ChatServer] UI available at: http://localhost:${this.port}/`);
+      console.log(`[ChatServer] Primary HTTP and WebSocket listening on port ${this.port}`);
+      console.log(`[ChatServer] Main UI available at: http://localhost:${this.port}/`);
+    });
+
+    const readerPort = this.port + 1;
+    this.readerHttpServer.listen(readerPort, () => {
+      console.log(`[ChatServer] Reader HTTP listening on port ${readerPort}`);
+      console.log(`[ChatServer] Reader UI available at: http://localhost:${readerPort}/`);
     });
   }
 
@@ -87,5 +99,6 @@ export class ChatServer {
   public close(): void {
     this.wss.close();
     this.httpServer.close();
+    this.readerHttpServer.close();
   }
 }

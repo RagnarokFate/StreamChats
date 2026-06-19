@@ -595,3 +595,37 @@ body {
 [data-theme="terminal"] .animate-in {
   animation: slideUpFadeIn 0.2s ease-out forwards;
 }
+
+/* ============================================================
+   READER MODE OVERRIDES
+   ============================================================ */
+body[data-reader="true"] {
+  overflow-y: auto;
+  height: auto;
+  min-height: 100vh;
+}
+
+body[data-reader="true"] #root {
+  height: auto;
+  min-height: 100vh;
+  justify-content: flex-start;
+}
+
+body[data-reader="true"] .chat-feed {
+  max-height: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  margin-bottom: 40px;
+}
+
+/* Custom background colors for reader mode based on themes */
+body[data-reader="true"][data-theme="glass"] { background-color: #1a1a1e; }
+body[data-reader="true"][data-theme="minimal"] { background-color: #121212; }
+body[data-reader="true"][data-theme="neon"] { background-color: #050510; }
+body[data-reader="true"][data-theme="classic"] { background-color: #18181b; }
+body[data-reader="true"][data-theme="retro"] { background-color: #140c1c; }
+body[data-reader="true"][data-theme="bubble"] { background-color: #eceff1; }
+body[data-reader="true"][data-theme="holographic"] { background: linear-gradient(135deg, #1f1c2c, #928dab); }
+body[data-reader="true"][data-theme="comic"] { background-color: #fffde7; }
+body[data-reader="true"][data-theme="terminal"] { background-color: #000000; }
+
