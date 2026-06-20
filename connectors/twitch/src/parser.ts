@@ -114,7 +114,7 @@ export function normalizeChatEvent(ircMessage: TwitchIRCMessage): ChatEvent | nu
     fragments.push({
       type: 'emote',
       id: emote.id,
-      url: `https://static-cdn.jtvnbs.net/emoticons/v2/${emote.id}/default/dark/1.0`,
+      url: `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`,
       alt: altText
     });
     currentIdx = emote.end + 1;

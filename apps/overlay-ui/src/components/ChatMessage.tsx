@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { UIMessage } from '../hooks/useChatFeed';
+import { useSettings } from '../hooks/useSettings';
 
 interface Props {
   message: UIMessage;
@@ -8,6 +9,7 @@ interface Props {
 
 export function ChatMessage({ message, onAnimationComplete }: Props) {
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const { settings } = useSettings();
 
   useEffect(() => {
     if (message.isDeleted) {
@@ -31,6 +33,60 @@ export function ChatMessage({ message, onAnimationComplete }: Props) {
   };
   const platformClass = platformClassMap[message.platform] || 'platform-custom';
 
+  const renderContent = () => {
+    if (!message.fragments || message.fragments.length === 0) {
+      return message.text;
+    }
+    
+    const emotesEnabled = settings.emoteGlobalEnabled && (settings.emotePlatformToggles[message.platform] ?? true);
+
+    return message.fragments.map((frag, idx) => {
+      if (frag.type === 'emote' && emotesEnabled) {
+        return (
+          <img 
+            key={idx} 
+            src={frag.url} 
+            alt={frag.alt || 'emote'} 
+            title={frag.alt || 'emote'}
+            className="chat-emote"
+            style={{ height: '1.2em', verticalAlign: 'middle', display: 'inline-block', margin: '0 2px' }}
+          />
+        );
+      }
+      if (frag.type === 'emote' && !emotesEnabled) {
+        return <span key={idx}>{frag.alt || ''}</span>;
+      }
+      if (frag.type === 'text') {
+        return <span key={idx}>{frag.text}</span>;
+      }
+      return null;
+    });
+  };
+
+  const renderTimestamp = () => {
+    if (settings.timestampMode === 'off') return null;
+    
+    const d = new Date(message.timestamp);
+    if (settings.timestampMode === 'absolute') {
+      return <span className="chat-message-timestamp" style={{ fontSize: '0.8rem', color: '#888', marginLeft: '8px' }}>{d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>;
+    }
+    
+    // relative
+    const diffMs = Date.now() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    let txt = 'just now';
+    if (diffMins > 0) {
+      if (diffMins >= 60) {
+        const diffHrs = Math.floor(diffMins / 60);
+        txt = `${diffHrs}h ago`;
+      } else {
+        txt = `${diffMins}m ago`;
+      }
+    }
+    
+    return <span className="chat-message-timestamp" style={{ fontSize: '0.8rem', color: '#888', marginLeft: '8px' }}>{txt}</span>;
+  };
+
   return (
     <div 
       className={`chat-message ${isAnimatingOut ? 'animate-out' : 'animate-in'}`}
@@ -39,9 +95,10 @@ export function ChatMessage({ message, onAnimationComplete }: Props) {
       <div className="chat-message-header">
         <div className={`chat-message-platform ${platformClass}`} />
         <span className="chat-message-author">{message.author.name}</span>
+        {renderTimestamp()}
       </div>
       <div className="chat-message-text">
-        {message.text}
+        {renderContent()}
       </div>
     </div>
   );

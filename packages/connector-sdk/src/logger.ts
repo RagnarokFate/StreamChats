@@ -45,10 +45,10 @@ export function createLogger(
       message,
       data,
     };
-    // Emit 'log', 'warning', or 'error' depending on level
+    // Emit 'log', 'warning', or 'error_log' depending on level
     let eventName = 'log';
     if (level === 'warn') eventName = 'warning';
-    if (level === 'error') eventName = 'error';
+    if (level === 'error') eventName = 'error_log';
     
     emitter.emit(eventName, event);
   };

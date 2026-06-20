@@ -1,20 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChatEvent, ModerationEvent } from '@obs-chat/event-schema';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChatEvent, ModerationEvent, CommandEvent, SettingsUpdateEvent, DashboardSettings, MessageFragment, StatusUpdateEvent } from '@obs-chat/event-schema';
 
 export interface UIMessage {
   eventId: string;
-  platform: 'twitch' | 'youtube' | 'custom';
+  platform: 'twitch' | 'youtube' | 'kick' | 'tiktok' | 'custom';
   timestamp: string;
   author: {
     id: string;
     name: string;
+    color?: string;
+    badges?: string[];
   };
   text: string;
+  fragments?: MessageFragment[];
   isDeleted: boolean;
 }
 
 export function useChatFeed(url: string) {
   const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [settingsUpdate, setSettingsUpdate] = useState<Partial<DashboardSettings> | null>(null);
+  const [statusUpdate, setStatusUpdate] = useState<StatusUpdateEvent | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -35,9 +40,10 @@ export function useChatFeed(url: string) {
                 timestamp: chatEvent.timestamp,
                 author: chatEvent.author,
                 text: chatEvent.message.text,
+                fragments: chatEvent.message.fragments,
                 isDeleted: false
               };
-              // Keep only the last 50 messages to keep the DOM light
+              // Keep only the last 50 messages
               const next = [...prev, newMsg];
               if (next.length > 50) return next.slice(next.length - 50);
               return next;
@@ -55,6 +61,11 @@ export function useChatFeed(url: string) {
                 return msg;
               }));
             }
+          } else if (data.type === 'settings_update') {
+            const settingsEvent = data as SettingsUpdateEvent;
+            setSettingsUpdate(settingsEvent.settings);
+          } else if (data.type === 'status_update') {
+            setStatusUpdate(data as StatusUpdateEvent);
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message', err);
@@ -71,11 +82,18 @@ export function useChatFeed(url: string) {
 
     return () => {
       if (ws.current) {
-        ws.current.onclose = null; // prevent reconnect loop on unmount
+        ws.current.onclose = null;
         ws.current.close();
       }
     };
   }, [url]);
 
-  return messages;
+  const sendCommand = useCallback((command: CommandEvent) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify(command));
+    }
+  }, []);
+
+  return { messages, sendCommand, settingsUpdate, statusUpdate };
 }
+

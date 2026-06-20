@@ -1,17 +1,21 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { ChatEvent, ModerationEvent } from '@obs-chat/event-schema';
+import { ChatEvent, ModerationEvent, CommandEvent, SettingsUpdateEvent, StatusUpdateEvent } from '@obs-chat/event-schema';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+
+type CommandHandler = (command: CommandEvent) => void;
 
 export class ChatServer {
   private wss: WebSocketServer;
   private httpServer: http.Server;
   private readerHttpServer: http.Server;
   private port: number;
+  private onCommand?: CommandHandler;
 
-  constructor(port: number = 9090) {
+  constructor(port: number = 9090, onCommand?: CommandHandler) {
     this.port = port;
+    this.onCommand = onCommand;
 
     const requestHandler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       // Resolve the path to the overlay-ui/dist folder
@@ -66,6 +70,19 @@ export class ChatServer {
     this.wss.on('connection', (ws: WebSocket) => {
       console.log('[ChatServer] New client connected to WebSocket');
       
+      ws.on('message', (data: Buffer) => {
+        try {
+          const parsed = JSON.parse(data.toString());
+          if (parsed && parsed.type === 'command') {
+            if (this.onCommand) {
+              this.onCommand(parsed as CommandEvent);
+            }
+          }
+        } catch (err) {
+          console.error('[ChatServer] Failed to parse incoming WebSocket message', err);
+        }
+      });
+
       ws.on('close', () => {
         console.log('[ChatServer] Client disconnected');
       });
@@ -87,7 +104,7 @@ export class ChatServer {
     });
   }
 
-  public broadcast(event: ChatEvent | ModerationEvent): void {
+  public broadcast(event: ChatEvent | ModerationEvent | SettingsUpdateEvent | StatusUpdateEvent): void {
     const data = JSON.stringify(event);
     for (const client of this.wss.clients) {
       if (client.readyState === WebSocket.OPEN) {

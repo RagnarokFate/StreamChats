@@ -198,6 +198,7 @@ body {
 
 .chat-message-text {
   font-size: var(--msg-text-size);
+  font-weight: var(--msg-weight, 400);
   line-height: 1.4;
   color: var(--text-secondary);
   word-wrap: break-word;

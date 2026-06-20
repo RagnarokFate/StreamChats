@@ -35,6 +35,10 @@ export class ModerationPipeline extends EventEmitter {
     connector.on('moderation_action', (event: ModerationEvent) => {
       this.emit('moderation_action', event); // Pass through
     });
+
+    connector.on('error', (error: Error) => {
+      this.emit('connector_error', { connector, error });
+    });
   }
 
   private handleChatMessage(event: ChatEvent) {
@@ -56,5 +60,9 @@ export class ModerationPipeline extends EventEmitter {
 
   public getHistory(): string[] {
     return this.historyBuffer.toArray();
+  }
+
+  public updateConfig(newOptions: Partial<ModerationOptions>) {
+    this.options = { ...this.options, ...newOptions };
   }
 }

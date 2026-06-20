@@ -64,3 +64,96 @@ export const ModerationEventSchema = BaseEventSchema.extend({
 });
 export type ModerationEvent = z.infer<typeof ModerationEventSchema>;
 
+// Dashboard specific schemas
+export const DashboardSettingsSchema = z.object({
+  backgroundColor: z.string(),
+  fontFamily: z.string(),
+  fontSize: z.number(),
+  fontWeight: z.number(),
+  activeTheme: z.string(),
+  timestampMode: z.enum(['relative', 'absolute', 'off']),
+  emoteGlobalEnabled: z.boolean(),
+  emotePlatformToggles: z.record(PlatformSchema, z.boolean()),
+});
+export type DashboardSettings = z.infer<typeof DashboardSettingsSchema>;
+
+export const ServerConfigSchema = z.object({
+  bannedWords: z.array(z.string()),
+  bannedWordAction: z.enum(['mask', 'drop', 'flag']),
+  maskCharacter: z.string(),
+  spamProtectionEnabled: z.boolean(),
+});
+export type ServerConfig = z.infer<typeof ServerConfigSchema>;
+
+export const ConnectorStatusSchema = z.enum(['IDLE', 'CONNECTING', 'CONNECTED', 'WAITING', 'RECONNECTING', 'ERROR']);
+export type ConnectorStatus = z.infer<typeof ConnectorStatusSchema>;
+
+export const PlatformStatusSchema = z.object({
+  platform: PlatformSchema,
+  status: ConnectorStatusSchema,
+  lastError: z.string().nullable().optional(),
+  reconnectCount: z.number(),
+  lastConnectedAt: z.string().nullable().optional(),
+  channelId: z.string(),
+});
+export type PlatformStatus = z.infer<typeof PlatformStatusSchema>;
+
+export const StreamStatisticsSchema = z.object({
+  platform: PlatformSchema,
+  totalMessages: z.number(),
+  uniqueChatters: z.number(),
+  messagesPerMinute: z.number(),
+});
+export type StreamStatistics = z.infer<typeof StreamStatisticsSchema>;
+
+// WebSocket Event Types (Server -> Client)
+export const SettingsUpdateEventSchema = z.object({
+  type: z.literal('settings_update'),
+  settings: DashboardSettingsSchema.partial(),
+});
+export type SettingsUpdateEvent = z.infer<typeof SettingsUpdateEventSchema>;
+
+export const StatusUpdateEventSchema = z.object({
+  type: z.literal('status_update'),
+  platforms: z.array(PlatformStatusSchema),
+  statistics: z.array(StreamStatisticsSchema),
+  serverConfig: ServerConfigSchema,
+});
+export type StatusUpdateEvent = z.infer<typeof StatusUpdateEventSchema>;
+
+// WebSocket Command Types (Client -> Server)
+export const CommandEventSchema = z.discriminatedUnion('action', [
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('clear_chat'),
+    payload: z.object({}),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('update_settings'),
+    payload: z.object({
+      settings: DashboardSettingsSchema.partial(),
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('update_moderation'),
+    payload: z.object({
+      config: ServerConfigSchema.partial(),
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('reconnect_platform'),
+    payload: z.object({
+      platform: PlatformSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('reset_stats'),
+    payload: z.object({}),
+  }),
+]);
+export type CommandEvent = z.infer<typeof CommandEventSchema>;
+
