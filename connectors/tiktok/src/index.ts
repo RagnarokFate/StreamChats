@@ -11,7 +11,7 @@ export class TikTokConnector extends BaseConnector {
       this.tiktokConnection = new TikTokLiveConnection(this.options.channelId, {});
 
       this.tiktokConnection.on(WebcastEvent.CHAT, (data: any) => {
-        const event: ChatEvent = {
+        const event: ChatEvent & { moderationStatus: string } = {
           eventId: crypto.randomUUID(),
           platform: 'tiktok',
           timestamp: new Date().toISOString(),
@@ -23,9 +23,10 @@ export class TikTokConnector extends BaseConnector {
           message: {
             text: data.comment,
             fragments: [{ type: 'text', text: data.comment }]
-          }
+          },
+          moderationStatus: 'approved',
         };
-        this.dispatchMessage(event);
+        this.dispatchEvent(event as import('@obs-chat/event-schema').StreamEvent);
       });
 
       this.tiktokConnection.on(WebcastEvent.GIFT, (data: any) => {
@@ -33,22 +34,21 @@ export class TikTokConnector extends BaseConnector {
           // It's a streak gift, only trigger when it's done
           return;
         }
-        const text = `Sent ${data.giftName} x${data.repeatCount || 1}`;
-        const event: ChatEvent = {
+        
+        const event: import('@obs-chat/event-schema').GiftEvent = {
           eventId: crypto.randomUUID(),
           platform: 'tiktok',
           timestamp: new Date().toISOString(),
-          type: 'chat',
-          author: {
+          type: 'gift',
+          sender: {
             id: data.userId || 'unknown',
             name: data.uniqueId || 'Unknown',
           },
-          message: {
-            text,
-            fragments: [{ type: 'text', text }]
-          }
+          giftType: data.giftName || 'Gift',
+          giftCount: data.repeatCount || 1,
+          rawPayload: data
         };
-        this.dispatchMessage(event);
+        this.dispatchEvent(event);
       });
 
       this.tiktokConnection.on(ControlEvent.DISCONNECTED, () => {

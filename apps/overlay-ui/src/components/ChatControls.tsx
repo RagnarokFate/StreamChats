@@ -1,11 +1,11 @@
 import React from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { CommandEvent } from '@obs-chat/event-schema';
+import { CommandEventV2 } from '@obs-chat/event-schema';
 import { EmoteToggle } from './EmoteToggle';
 import { TimestampControls } from './TimestampControls';
 
 interface ChatControlsProps {
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 export function ChatControls({ sendCommand }: ChatControlsProps) {
@@ -122,6 +122,27 @@ export function ChatControls({ sendCommand }: ChatControlsProps) {
           </div>
         </div>
       </div>
+      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '24px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.1rem' }}>View Mode</h3>
+        <select 
+          value={settings.viewMode} 
+          onChange={(e) => sendCommand({
+            type: 'command',
+            action: 'update_settings',
+            payload: { settings: { viewMode: e.target.value as any } }
+          })}
+          style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px' }}
+        >
+          <option value="unified">Unified (Default)</option>
+          <option value="split">Split</option>
+          <option value="priority">Priority</option>
+          <option value="moderator">Moderator</option>
+        </select>
+        <p style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '8px' }}>
+          Unified merges all chats. Split separates platforms. Moderator adds inline actions.
+        </p>
+      </div>
+
       <EmoteToggle sendCommand={sendCommand} />
       <TimestampControls sendCommand={sendCommand} />
     </div>

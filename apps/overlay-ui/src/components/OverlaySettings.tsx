@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { CommandEvent } from '@obs-chat/event-schema';
+import { CommandEventV2 } from '@obs-chat/event-schema';
 
 interface OverlaySettingsProps {
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 const THEMES = ['glass', 'minimal', 'neon', 'classic', 'retro', 'bubble', 'holographic', 'comic', 'terminal'];

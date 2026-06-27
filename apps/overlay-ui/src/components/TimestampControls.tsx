@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { CommandEvent } from '@obs-chat/event-schema';
+import { CommandEventV2 } from '@obs-chat/event-schema';
 
 interface TimestampControlsProps {
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 export function TimestampControls({ sendCommand }: TimestampControlsProps) {

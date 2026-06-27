@@ -44,7 +44,7 @@ export class KickConnector extends BaseConnector {
         const rawData = typeof data === 'string' ? data : JSON.stringify(data);
         const event = parseKickMessage(rawData, this.options.channelId);
         if (event) {
-          this.dispatchMessage(event);
+          this.dispatchEvent(event);
         }
       });
 

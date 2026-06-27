@@ -6,5 +6,6 @@
   ],
   "bannedWordAction": "mask",
   "maskCharacter": "*",
-  "spamProtectionEnabled": true
+  "spamProtectionEnabled": true,
+  "platforms": {}
 }

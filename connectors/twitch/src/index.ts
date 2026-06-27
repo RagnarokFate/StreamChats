@@ -1,7 +1,7 @@
 import { BaseConnector, ConnectorOptions, ConnectorStatus, createLogger, ConnectorLogger } from '@obs-chat/connector-sdk';
 import WebSocket from 'ws';
 import { resolveInput } from './utils';
-import { parseIRCMessage, normalizeChatEvent } from './parser';
+import { parseIRCMessage, parseStreamEvent } from './parser';
 
 export interface TwitchConnectorConfig extends ConnectorOptions {
   platform: 'twitch';
@@ -91,10 +91,10 @@ export class TwitchConnector extends BaseConnector {
     const ircMsg = parseIRCMessage(message);
     if (!ircMsg) return;
 
-    if (ircMsg.command.split(' ')[0] === 'PRIVMSG') {
-      const chatEvent = normalizeChatEvent(ircMsg);
-      if (chatEvent) {
-        this.dispatchMessage(chatEvent);
+    if (ircMsg.command.split(' ')[0] === 'PRIVMSG' || ircMsg.command === 'USERNOTICE') {
+      const streamEvent = parseStreamEvent(ircMsg);
+      if (streamEvent) {
+        this.dispatchEvent(streamEvent);
       }
     } else if (ircMsg.command === 'NOTICE' || ircMsg.command === 'USERSTATE') {
       this.logger.debug('Received diagnostic command', { command: ircMsg.command, parameters: ircMsg.parameters });

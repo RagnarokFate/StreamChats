@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { CommandEvent, Platform } from '@obs-chat/event-schema';
+import { CommandEventV2, Platform } from '@obs-chat/event-schema';
 
 interface EmoteToggleProps {
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 export function EmoteToggle({ sendCommand }: EmoteToggleProps) {

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { StatusUpdateEvent, CommandEvent } from '@obs-chat/event-schema';
+import { StatusUpdateEvent, CommandEventV2 } from '@obs-chat/event-schema';
 
 interface ModerationSettingsProps {
   statusUpdate: StatusUpdateEvent | null;
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 export function ModerationSettings({ statusUpdate, sendCommand }: ModerationSettingsProps) {

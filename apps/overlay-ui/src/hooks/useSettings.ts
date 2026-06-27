@@ -11,7 +11,8 @@ const DEFAULT_SETTINGS: DashboardSettings = {
   activeTheme: "glass",
   timestampMode: "off",
   emoteGlobalEnabled: true,
-  emotePlatformToggles: { twitch: true, youtube: true, kick: true, tiktok: true, custom: true }
+  emotePlatformToggles: { twitch: true, youtube: true, kick: true, tiktok: true, custom: true },
+  viewMode: "unified"
 };
 
 let globalSettings = { ...DEFAULT_SETTINGS };

@@ -3,8 +3,9 @@ import { YouTubeConnector } from '@obs-chat/connector-youtube';
 import { KickConnector } from '@obs-chat/connector-kick';
 import { TikTokConnector } from '@obs-chat/connector-tiktok';
 import { ModerationPipeline } from '@obs-chat/moderation-pipeline';
+import { EventBus } from '@obs-chat/event-bus';
 import { ChatServer } from './server';
-import { Platform, StatusUpdateEvent, PlatformStatus } from '@obs-chat/event-schema';
+import { Platform, StatusUpdateEvent, PlatformStatus, StreamEvent } from '@obs-chat/event-schema';
 import { loadConfig, getConfig } from './config';
 import { logger, chatLogger } from './utils/logger';
 
@@ -33,9 +34,26 @@ async function bootstrap() {
     }
   }
 
-  // 1. Load config and Start WebSocket Server
+  // 1. Initialize Event Bus and Load Config
   const serverConfig = loadConfig();
-  const server = new ChatServer(port, (command) => {
+  const eventBus = new EventBus();
+  const activePlatforms: string[] = [];
+  
+  const finalTwitch = twitchChannel || serverConfig.platforms?.twitch;
+  const finalYoutube = youtubeChannel || serverConfig.platforms?.youtube;
+  const finalKick = kickChannel || serverConfig.platforms?.kick;
+  const finalTiktok = tiktokChannel || serverConfig.platforms?.tiktok;
+
+  if (finalTwitch) activePlatforms.push('twitch');
+  if (finalYoutube) activePlatforms.push('youtube');
+  if (finalKick) activePlatforms.push('kick');
+  if (finalTiktok) activePlatforms.push('tiktok');
+  
+  const sessionId = eventBus.initialize(activePlatforms);
+  logger.info(`Event Bus initialized. Session: ${sessionId}`);
+
+  // 2. Start WebSocket Server
+  const server = new ChatServer(port, eventBus, (command) => {
     if (command.action === 'reset_stats') {
       Object.values(streamStats).forEach(s => {
         s.totalMessages = 0;
@@ -43,6 +61,44 @@ async function bootstrap() {
         s.recentTimestamps = [];
       });
       logger.info('Stream statistics reset manually.');
+    } else if (command.action === 'manage_platform') {
+      const { platform, action, username } = command.payload;
+      if (platform === 'custom') return;
+      
+      const { loadConfig, saveConfig } = require('./config');
+      const currentConfig = loadConfig();
+      if (!currentConfig.platforms) currentConfig.platforms = {};
+      
+      if (action === 'connect') {
+        logger.info(`Connecting to ${platform} as ${username}...`);
+        currentConfig.platforms[platform] = username;
+        saveConfig(currentConfig);
+        
+        // Start the connector
+        let connector;
+        if (platform === 'twitch' && username) connector = new TwitchConnector({ platform: 'twitch', channelId: username });
+        if (platform === 'youtube' && username) connector = new YouTubeConnector({ platform: 'youtube', channelId: username });
+        if (platform === 'kick' && username) connector = new KickConnector({ platform: 'kick', channelId: username });
+        if (platform === 'tiktok' && username) connector = new TikTokConnector({ platform: 'tiktok', channelId: username });
+        
+        if (connector && username) {
+           pipeline.addConnector(connector);
+           platformStatus[platform as Platform] = { platform: platform as Platform, status: 'CONNECTING', reconnectCount: 0, channelId: username };
+           connector.start().then(() => {
+             const ps = platformStatus[platform as Platform];
+             if (ps) { ps.status = 'CONNECTED'; ps.lastConnectedAt = new Date().toISOString(); }
+           }).catch((err: any) => {
+             const ps = platformStatus[platform as Platform];
+             if (ps) { ps.status = 'ERROR'; ps.lastError = err.message; }
+           });
+        }
+      } else if (action === 'disconnect') {
+        logger.info(`Disconnecting from ${platform}...`);
+        currentConfig.platforms[platform] = undefined;
+        saveConfig(currentConfig);
+        // Remove from platformStatus to revert UI to 'not connected' state
+        platformStatus[platform as Platform] = undefined;
+      }
     } else if (command.action === 'reconnect_platform') {
       const platform = command.payload.platform;
       logger.info(`Manual reconnect requested for ${platform}`);
@@ -97,16 +153,14 @@ async function bootstrap() {
     custom: undefined,
   };
 
-  // 3. Connect Pipeline to Server
+  // 3. Connect Pipeline to Event Bus
   pipeline.on('chat_message', (event) => {
-    chatLogger.logMessage(event);
-    server.broadcast(event);
-    const s = streamStats[event.platform as Platform];
-    if (s) {
-      s.totalMessages++;
-      s.chatters.add(event.author.id);
-      s.recentTimestamps.push(Date.now());
-    }
+    eventBus.publish({
+      ...event,
+      type: 'chat',
+    } as StreamEvent).catch((err: Error) => {
+      logger.error('Failed to publish chat event to Event Bus:', err.message);
+    });
   });
   
   pipeline.on('moderation_action', (event) => {
@@ -145,6 +199,20 @@ async function bootstrap() {
         platformStatus.twitch.lastError = err.message;
       }
     }));
+  }
+
+  // Handle saved configuration if not provided via CLI
+  if (!twitchChannel && serverConfig.platforms?.twitch) {
+     const savedTwitch = serverConfig.platforms.twitch;
+     logger.info(`Initializing Twitch Connector from saved config: ${savedTwitch}`);
+     platformStatus.twitch = { platform: 'twitch', status: 'CONNECTING', reconnectCount: 0, channelId: savedTwitch };
+     const twitchConnector = new TwitchConnector({ platform: 'twitch', channelId: savedTwitch });
+     pipeline.addConnector(twitchConnector);
+     promises.push(twitchConnector.start().then(() => {
+       if (platformStatus.twitch) { platformStatus.twitch.status = 'CONNECTED'; platformStatus.twitch.lastConnectedAt = new Date().toISOString(); }
+     }).catch((err: any) => {
+       if (platformStatus.twitch) { platformStatus.twitch.status = 'ERROR'; platformStatus.twitch.lastError = err.message; }
+     }));
   }
 
   if (youtubeChannel) {
@@ -231,4 +299,17 @@ async function bootstrap() {
   logger.info(`Server fully operational. Awaiting OBS connections on ws://localhost:${port}`);
 }
 
-bootstrap().catch(console.error);
+process.on('uncaughtException', (err) => {
+  logger.error(`FATAL: Uncaught Exception: ${err.message}`);
+  logger.error(err.stack || '');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`FATAL: Unhandled Rejection at: ${promise}, reason: ${reason}`);
+});
+
+bootstrap().catch((err) => {
+  logger.error(`Bootstrap failed: ${err.message}`);
+  process.exit(1);
+});

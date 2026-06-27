@@ -26,13 +26,13 @@ function App() {
 
   const portStr = window.location.port;
   let wsPort = '9090';
-  if (import.meta.env.DEV) {
+  if ((import.meta as any).env?.DEV) {
     wsPort = '9090';
   } else {
     wsPort = (portStr && isReaderMode) ? String(parseInt(portStr) - 1) : (portStr || '9090');
   }
   
-  const { messages, settingsUpdate, sendCommand, statusUpdate } = useChatFeed(`ws://${window.location.hostname || 'localhost'}:${wsPort}`);
+  const { messages, sendCommand, settingsUpdate, statusUpdate, identities, accounts } = useChatFeed(`ws://${window.location.hostname || 'localhost'}:${wsPort}`);
 
   // Sync settings updates from WebSocket to local state
   useEffect(() => {
@@ -52,10 +52,10 @@ function App() {
     <Routes>
       <Route path="/" element={
         <div data-theme={theme} style={cssVariables}>
-          <ChatFeed messages={messages} />
+          <ChatFeed messages={messages} identities={identities} accounts={accounts} />
         </div>
       } />
-      <Route path="/dashboard/*" element={<Dashboard sendCommand={sendCommand} messages={messages} statusUpdate={statusUpdate} />} />
+      <Route path="/dashboard/*" element={<Dashboard sendCommand={sendCommand} messages={messages} statusUpdate={statusUpdate} identities={identities} accounts={accounts} wsUrl={`ws://${window.location.hostname || 'localhost'}:${wsPort}`} />} />
     </Routes>
   );
 }

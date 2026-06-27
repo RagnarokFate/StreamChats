@@ -1,8 +1,8 @@
-import { StatusUpdateEvent, CommandEvent } from '@obs-chat/event-schema';
+import { StatusUpdateEvent, CommandEventV2 } from '@obs-chat/event-schema';
 
 interface StatsPanelProps {
   statusUpdate: StatusUpdateEvent | null;
-  sendCommand: (command: CommandEvent) => void;
+  sendCommand: (command: CommandEventV2) => void;
 }
 
 export function StatsPanel({ statusUpdate, sendCommand }: StatsPanelProps) {

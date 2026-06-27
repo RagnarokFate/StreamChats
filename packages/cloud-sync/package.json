@@ -1,0 +1,17 @@
+{
+  "name": "@obs-chat/cloud-sync",
+  "version": "1.0.0",
+  "description": "Cloud synchronization client for settings and themes",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@obs-chat/event-schema": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}

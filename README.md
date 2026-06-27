@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Aggregate Twitch, YouTube, Kick, and TikTok live chat into a single beautiful overlay for OBS Studio.</strong>
+  <strong>Aggregate Twitch, YouTube, Kick, and TikTok live chat into a single beautiful overlay for OBS Studio and Native Desktop.</strong>
 </p>
 
 <p align="center">
@@ -20,17 +20,18 @@
 - [About](#-about)
 - [Key Features](#-key-features)
 - [Supported Platforms](#-supported-platforms)
-- [Overlay Themes](#-overlay-themes)
 - [Architecture](#-architecture)
-- [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Usage](#-usage)
-  - [Quick Start (CLI)](#quick-start-cli)
-  - [OBS Studio Setup](#obs-studio-setup)
-  - [Choosing a Theme](#choosing-a-theme)
+- [Installation Guide](#-installation-guide)
+- [Running StreamChats](#-running-streamchats)
+  - [Native Desktop App](#1-native-desktop-app-recommended)
+  - [Command Line Interface (CLI)](#2-command-line-interface-cli)
+  - [OBS Native Lua Script](#3-obs-native-lua-script)
+- [Usage & Guides](#-usage--guides)
+  - [The Control Panel Dashboard](#the-control-panel-dashboard)
+  - [OBS Browser Source Integration](#obs-browser-source-integration)
+  - [Choosing an Overlay Theme](#choosing-an-overlay-theme)
+- [Dynamic Connectors & Extensibility](#-dynamic-connectors--extensibility)
 - [Project Structure](#-project-structure)
-- [Adding a New Platform](#-adding-a-new-platform)
-- [Configuration Reference](#-configuration-reference)
 - [Known Limitations](#-known-limitations)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -39,9 +40,11 @@
 
 ## 🎯 About
 
-**StreamChats** is a modular, open-source chat aggregation engine built for live streamers. It combines chat messages from multiple streaming platforms into a single, real-time overlay that runs directly inside OBS Studio as a Browser Source.
+**StreamChats** is a modular, open-source chat aggregation engine built for live streamers. It merges chat messages, gifts, super chats, raids, and follows from multiple streaming platforms into a single, real-time feed.
 
-Everything runs **locally on your machine** — no cloud services, no external accounts, no API keys required.
+You can view the feed via the **Native Desktop App**, manage it via the **Control Panel Dashboard**, and display it on stream via the **OBS Browser Source**.
+
+Everything runs **100% locally on your machine** — no cloud services, no external accounts, and no mandatory API keys required.
 
 ---
 
@@ -49,13 +52,14 @@ Everything runs **locally on your machine** — no cloud services, no external a
 
 | Feature | Description |
 |---------|-------------|
-| 🔗 **Multi-Platform Chat** | Aggregate messages from Twitch, YouTube, Kick, and TikTok simultaneously |
-| 🎨 **9 Overlay Themes** | From cyberpunk neon to retro pixel art — match your brand |
-| 🛡️ **Built-in Moderation** | Profanity filter and banned-word censoring out of the box |
-| 🎬 **Native OBS Plugin** | Lua script adds a settings panel directly inside OBS Studio |
-| 🏠 **100% Local** | No cloud, no SaaS, no external dependencies |
-| ⚡ **Lightweight** | Under 2% CPU overhead — built for marathon sessions |
-| 🔌 **Extensible SDK** | Add new platforms with a single `BaseConnector` class |
+| 🖥️ **Native Desktop App** | A fully native Tauri Windows application for managing your stream without ever touching a CLI. |
+| 🔗 **Multi-Platform Chat** | Aggregate messages from Twitch, YouTube, Kick, and TikTok simultaneously. |
+| 🎨 **9 Overlay Themes** | Match your brand with themes ranging from cyberpunk neon to retro pixel art. |
+| 🛡️ **Built-in Moderation** | Real-time profanity filtering and banned-word censoring out of the box. |
+| ☁️ **Cloud Sync & Studio** | Optional Last-Write-Wins (LWW) cloud sync with robust conflict logging to persist your settings. |
+| 🧩 **Premium Marketplace** | Expand features securely using isolated-vm sandboxed plugins. |
+| 🎬 **Native OBS Plugin** | Included Lua script adds a settings panel directly inside OBS Studio to spawn the server. |
+| ⚡ **Lightweight** | Under 2% CPU overhead — backed by a highly optimized SQLite Event Bus. |
 
 ---
 
@@ -88,13 +92,122 @@ Everything runs **locally on your machine** — no cloud services, no external a
 
 ---
 
-## 🎨 Overlay Themes
+## 🏗️ Architecture
 
-StreamChats ships with **9 beautifully crafted overlay themes**. Select one by appending `?theme=<name>` to the Browser Source URL.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          Desktop App                            │
+│  ┌────────────────────────┐  ┌───────────────────────────────┐  │
+│  │   Tauri Window          │  │   OBS Studio + Lua Script     │  │
+│  └───────────┬────────────┘  └───────────────▲───────────────┘  │
+└──────────────┼───────────────────────────────┼──────────────────┘
+               │ connects                      │ WebSocket (ws://)
+               ▼                               │
+┌──────────────────────────────────────────────┴──────────────────┐
+│                      Local Node.js Server                       │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                     Event Bus (SQLite)                     │  │
+│  │   (Persists stream events, handles replay & consumer ops)  │  │
+│  └───────────▲───────────────────────────────▲───────────────┘  │
+│              │ published events              │ reads            │
+│  ┌───────────┴──────────┐       ┌────────────┴─────────────┐    │
+│  │ Moderation Pipeline  │       │       Analytics SDK      │    │
+│  └───────────▲──────────┘       └──────────────────────────┘    │
+│              │ normalized ChatEvent                             │
+│  ┌────────┐ ┌────────┐ ┌──────┐ ┌─────┐ ┌───────────────────┐   │
+│  │ Twitch │ │YouTube │ │ Kick │ │ TT  │ │ Plugin Sandbox    │   │
+│  │  IRC   │ │ Poll   │ │Pusher│ │Proto│ │ (isolated-vm)     │   │
+│  └────────┘ └────────┘ └──────┘ └─────┘ └───────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-<p align="center">
-  <img src="docs/images/themes-showcase.png" alt="All 9 Themes" width="100%" />
-</p>
+**Data flow:**
+1. Each **Dynamic Connector** connects to its platform's chat API and normalizes messages.
+2. The **Moderation Pipeline** filters profanity and censors banned words.
+3. The **SQLite Event Bus** stores the events to disk for persistence and analytics.
+4. The **Local Server** broadcasts events over dual WebSockets to the Overlay UI and Dashboard.
+5. The **Tauri Desktop App** natively connects to the server and presents the dashboard.
+
+---
+
+## 🚀 Installation Guide
+
+### Prerequisites
+- **Node.js** (v20+)
+- **npm** (v9+)
+- **Rust** (Required *only* if you are building the Native Desktop App)
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/RagnarokFate/StreamChats.git
+cd StreamChats
+npm install
+```
+
+### 2. Build Core Packages & UI
+
+Before running the server, build all the internal monorepo packages:
+
+```bash
+npm run build --workspaces --if-present
+```
+
+---
+
+## 🏃 Running StreamChats
+
+StreamChats can be operated in three different ways depending on your technical preference:
+
+### 1. Native Desktop App (Recommended)
+We built a native Windows Desktop app using Tauri. This gives you a standalone window for your dashboard without needing a web browser or command line.
+
+```bash
+npm run tauri dev -w apps/desktop
+```
+*This will compile the Rust backend and launch the native StreamChats Dashboard window.*
+
+### 2. Command Line Interface (CLI)
+If you prefer running the server headlessly and viewing the dashboard in your standard web browser:
+
+```bash
+# Start the local background server
+node apps/local-server/dist/index.js --port=9090
+```
+Then, open `http://localhost:9091/dashboard` in your browser.
+
+*You can also pass channels directly via CLI:*
+`node apps/local-server/dist/index.js --twitch=ragnarokfate --youtube=@RagnarokFate`
+
+### 3. OBS Native Lua Script
+If you want OBS Studio to automatically start and stop StreamChats:
+1. Open **OBS Studio** → **Tools** → **Scripts**.
+2. Click the **+** button and select `plugins/obs/obs-chat-aggregator.lua`.
+3. Configure your channels directly inside OBS and hit **Connect / Apply**. The script will securely run the Node background server automatically.
+
+---
+
+## 🎮 Usage & Guides
+
+### The Control Panel Dashboard
+When the server is running, the **Control Panel** is available either via the Native Desktop App or by navigating to `http://localhost:9091/dashboard` in a browser. 
+
+The dashboard provides multiple panels:
+- **Chat Feed**: A solid-background reader version of the chat for easy moderation.
+- **Settings**: Manage platform connections, dynamically connect/disconnect platforms on the fly, and configure the profanity filter.
+- **Plugin Marketplace**: Install new features securely into the `isolated-vm` sandbox (e.g., AI Summarizer, Custom Visualizers).
+- **Cloud Sync**: Sync your settings and preferences securely.
+
+### OBS Browser Source Integration
+The actual Transparent Overlay meant for your live stream is hosted on a different port than the dashboard. 
+
+1. In your OBS Scene, click **+** → **Browser**.
+2. Set the URL to: `http://localhost:9090/?theme=glass`
+3. Set **Width** to `500` and **Height** to `800`.
+4. ✅ Check **"Shutdown source when not visible"** to save resources.
+
+### Choosing an Overlay Theme
+StreamChats ships with **9 beautifully crafted overlay themes**. To choose one, simply change the `?theme=` parameter in the OBS Browser Source URL:
 
 | Theme | URL Parameter | Description |
 |-------|:---:|-------------|
@@ -108,165 +221,36 @@ StreamChats ships with **9 beautifully crafted overlay themes**. Select one by a
 | **Comic** | `?theme=comic` | Bold outlines and offset drop shadows, comic book feel |
 | **Terminal** | `?theme=terminal` | Green-on-black hacker aesthetic with monospace font |
 
-### Theme Previews
-
-<table>
-<tr>
-<td align="center" width="33%">
-  <img src="docs/images/theme-glass.png" alt="Glass Theme" width="280" /><br/>
-  <strong>Glass</strong>
-</td>
-<td align="center" width="33%">
-  <img src="docs/images/theme-neon.png" alt="Neon Theme" width="280" /><br/>
-  <strong>Neon</strong>
-</td>
-<td align="center" width="33%">
-  <img src="docs/images/theme-terminal.png" alt="Terminal Theme" width="280" /><br/>
-  <strong>Terminal</strong>
-</td>
-</tr>
-</table>
-
 ---
 
-## 🏗️ Architecture
+## 🔌 Dynamic Connectors & Extensibility
 
+StreamChats features **Dynamic Connectors**. This means you do not need to restart the server to add or remove platforms. You can connect to Twitch, disconnect from YouTube, and connect to TikTok entirely on-the-fly directly from the Settings Dashboard!
+
+If you want to add a completely new platform to StreamChats, the `BaseConnector` SDK makes it incredibly simple:
+
+```typescript
+import { BaseConnector, ConnectorStatus } from '@obs-chat/connector-sdk';
+import crypto from 'crypto';
+
+export class MyPlatformConnector extends BaseConnector {
+  protected async connect(): Promise<void> {
+    this.dispatchMessage({
+      eventId: crypto.randomUUID(),
+      platform: 'custom',
+      timestamp: new Date().toISOString(),
+      type: 'chat',
+      author: { id: 'user-123', name: 'Username' },
+      message: { text: 'Hello world!', fragments: [] },
+    });
+    this.setStatus(ConnectorStatus.CONNECTED);
+  }
+
+  protected async disconnect(): Promise<void> {
+    this.setStatus(ConnectorStatus.IDLE);
+  }
+}
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       OBS Studio                            │
-│  ┌────────────────────────┐  ┌────────────────────────────┐ │
-│  │   Lua Plugin            │  │   Browser Source            │ │
-│  │   (Settings + Spawner)  │  │   (http://localhost:9090)   │ │
-│  └───────────┬────────────┘  └───────────▲────────────────┘ │
-└──────────────┼───────────────────────────┼──────────────────┘
-               │ spawns                    │ WebSocket (ws://)
-               ▼                           │
-┌──────────────────────────────────────────┐
-│          Local Node.js Server            │
-│  ┌────────────────────────────────────┐  │
-│  │     Moderation Pipeline            │  │
-│  │   (filter → censor → broadcast)    │  │
-│  └───────────▲────────────────────────┘  │
-│              │ normalized ChatEvent      │
-│  ┌────────┐ ┌────────┐ ┌──────┐ ┌─────┐ │
-│  │ Twitch │ │YouTube │ │ Kick │ │ TT  │ │
-│  │  IRC   │ │ Poll   │ │Pusher│ │Proto│ │
-│  └────────┘ └────────┘ └──────┘ └─────┘ │
-└──────────────────────────────────────────┘
-```
-
-**Data flow:**
-1. Each **Connector** connects to its platform's chat API and normalizes messages into a `ChatEvent` schema.
-2. The **Moderation Pipeline** filters profanity, censors banned words, and manages the chat buffer.
-3. The **Local Server** broadcasts events over WebSocket to all connected Browser Sources.
-4. The **Overlay UI** (React) renders the chat feed with the selected theme and animations.
-5. The **OBS Lua Plugin** spawns the server and provides a UI for configuration.
-
----
-
-## 📋 Requirements
-
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| **Node.js** | v20+ | Required for TikTok connector |
-| **npm** | v9+ | Comes bundled with Node.js |
-| **OBS Studio** | v28+ | For the Lua plugin and Browser Source |
-| **Operating System** | Windows / macOS / Linux | Cross-platform support |
-
----
-
-## 🚀 Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/RagnarokFate/StreamChats.git
-cd StreamChats
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Build All Packages
-
-```bash
-# Build the shared packages first
-npm run build -w packages/event-schema
-npm run build -w packages/connector-sdk
-npm run build -w packages/moderation-pipeline
-
-# Build connectors
-npm run build -w connectors/twitch
-npm run build -w connectors/youtube
-npm run build -w connectors/kick
-npm run build -w connectors/tiktok
-
-# Build the server and UI
-npm run build -w apps/local-server
-npm run build -w apps/overlay-ui
-```
-
-### 4. Verify Installation
-
-```bash
-node apps/local-server/dist/index.js --twitch=ragnarokfate --port=9090
-```
-
-Open `http://localhost:9090` in your browser — you should see the chat overlay.
-
----
-
-## 🎮 Usage
-
-### Quick Start (CLI)
-
-Run the local server with your platform channels:
-
-```bash
-node apps/local-server/dist/index.js \
-  --twitch=ragnarokfate \
-  --youtube=@RagnarokFate \
-  --kick=ragnarokfate \
-  --tiktok=ragnarokfate \
-  --port=9090
-```
-
-### OBS Studio Setup
-
-#### Step 1: Load the Lua Script
-1. Open **OBS Studio** → **Tools** → **Scripts**
-2. Click the **+** button
-3. Navigate to and select `plugins/obs/obs-chat-aggregator.lua`
-
-#### Step 2: Configure Your Channels
-1. In the script properties panel, enter your channel names for **Twitch** and **YouTube**
-2. Click the **"Connect / Apply"** button to start the server
-
-#### Step 3: Add the Browser Source
-1. In your OBS Scene, click **+** → **Browser**
-2. Set the URL to:
-   ```
-   http://localhost:9090/?theme=glass
-   ```
-3. Set **Width** to `500` and **Height** to `800` (adjust to your preference)
-4. ✅ Check **"Shutdown source when not visible"** to save resources
-
-> **💡 Tip:** The overlay background is fully transparent, so it will blend seamlessly into your stream layout.
-
-### Choosing a Theme
-
-Simply change the `?theme=` parameter in the Browser Source URL:
-
-```
-http://localhost:9090/?theme=neon
-http://localhost:9090/?theme=terminal
-http://localhost:9090/?theme=bubble
-```
-
-If no theme is specified, it defaults to `glass`.
 
 ---
 
@@ -276,13 +260,14 @@ If no theme is specified, it defaults to `glass`.
 StreamChats/
 │
 ├── 📂 apps/
+│   ├── desktop/                  # Native Tauri Desktop Application
 │   ├── local-server/             # Node.js HTTP + WebSocket server
-│   │   └── src/index.ts          # CLI entry point, connector orchestration
-│   └── overlay-ui/               # React/Vite chat overlay frontend
+│   │   └── src/index.ts          # CLI entry point, orchestration
+│   └── overlay-ui/               # React/Vite chat overlay & Dashboard
 │       └── src/
 │           ├── App.tsx           # Theme router
 │           ├── index.css         # All 9 themes
-│           └── components/       # ChatFeed, ChatMessage
+│           └── components/       # ChatFeed, Dashboard, PluginManager
 │
 ├── 📂 connectors/
 │   ├── twitch/                   # Twitch IRC WebSocket connector
@@ -291,9 +276,15 @@ StreamChats/
 │   └── tiktok/                   # TikTok Live protobuf connector
 │
 ├── 📂 packages/
+│   ├── analytics/                # Chat stream analytics SDK
+│   ├── cloud-sync/               # Cloud sync Last-Write-Wins logic
 │   ├── connector-sdk/            # BaseConnector abstract class
+│   ├── event-bus/                # SQLite persistent Event Bus
 │   ├── event-schema/             # Zod schemas (ChatEvent, Platform)
-│   └── moderation-pipeline/      # Profanity filter & event router
+│   ├── identity/                 # Role-Based Access Control (RBAC)
+│   ├── moderation-pipeline/      # Profanity filter & event router
+│   ├── obs-integration/          # Shared OBS scripts and bindings
+│   └── plugin-sdk/               # Plugin Marketplace & isolated-vm Sandbox
 │
 ├── 📂 plugins/
 │   └── obs/                      # OBS Studio Lua script
@@ -304,96 +295,10 @@ StreamChats/
 │   ├── styles.css
 │   └── images/
 │
-├── 📂 specs/                     # Feature specifications (001-005)
+├── 📂 specs/                     # Feature specifications (001-007)
 ├── README.md                     # This file
 └── package.json                  # Monorepo workspace config
 ```
-
----
-
-## 🔌 Adding a New Platform
-
-StreamChats is designed to be easily extensible. To add a new platform connector:
-
-### 1. Create the Package
-
-```bash
-mkdir connectors/my-platform/src
-```
-
-### 2. Implement the Connector
-
-```typescript
-// connectors/my-platform/src/index.ts
-import { BaseConnector, ConnectorStatus } from '@obs-chat/connector-sdk';
-import crypto from 'crypto';
-
-export class MyPlatformConnector extends BaseConnector {
-  protected async connect(): Promise<void> {
-    // Connect to the platform's chat API
-    // For each incoming message:
-    this.dispatchMessage({
-      eventId: crypto.randomUUID(),
-      platform: 'custom',        // Add to PlatformSchema if needed
-      timestamp: new Date().toISOString(),
-      type: 'chat',
-      author: {
-        id: 'user-123',
-        name: 'Username',
-      },
-      message: {
-        text: 'Hello world!',
-        fragments: [{ type: 'text', text: 'Hello world!' }],
-      },
-    });
-
-    this.setStatus(ConnectorStatus.CONNECTED);
-  }
-
-  protected async disconnect(): Promise<void> {
-    // Clean up connections
-    this.setStatus(ConnectorStatus.IDLE);
-  }
-}
-```
-
-### 3. Register in the Local Server
-
-Add your connector to `apps/local-server/src/index.ts`:
-
-```typescript
-import { MyPlatformConnector } from '@obs-chat/connector-my-platform';
-
-// Inside main():
-if (myPlatformChannel) {
-  const connector = new MyPlatformConnector({
-    platform: 'custom',
-    channelId: myPlatformChannel,
-  });
-  pipeline.addConnector(connector);
-  promises.push(connector.start());
-}
-```
-
----
-
-## ⚙️ Configuration Reference
-
-### CLI Arguments
-
-| Argument | Description | Example |
-|----------|-------------|---------|
-| `--twitch=<channel>` | Twitch channel name (without `#`) | `--twitch=ragnarokfate` |
-| `--youtube=<handle>` | YouTube channel handle | `--youtube=@RagnarokFate` |
-| `--kick=<channel>` | Kick channel name | `--kick=ragnarokfate` |
-| `--tiktok=<username>` | TikTok username | `--tiktok=ragnarokfate` |
-| `--port=<number>` | Server port (default: `9090`) | `--port=8080` |
-
-### URL Parameters
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `theme` | Overlay visual theme | `?theme=neon` |
 
 ---
 
@@ -402,7 +307,7 @@ if (myPlatformChannel) {
 | Platform | Limitation |
 |----------|------------|
 | **Kick** | No official API — uses undocumented Pusher endpoint. May be blocked by Cloudflare in some networks. |
-| **TikTok** | No official API — uses `tiktok-live-connector`. Requires Node.js 20+. May require a sign API key for some regions. |
+| **TikTok** | No official API — uses `tiktok-live-connector`. May require a sign API key for some regions. |
 | **YouTube** | Requires an active live stream with **public chat** enabled. |
 | **General** | All unofficial platform APIs may break if the platforms change their internal protocols. |
 
@@ -417,21 +322,6 @@ Contributions are welcome! Here's how you can help:
 3. **Commit** your changes (`git commit -m "feat: add my feature"`)
 4. **Push** to the branch (`git push origin feat/my-feature`)
 5. **Open** a Pull Request
-
-### Development Setup
-
-```bash
-# Clone and install
-git clone https://github.com/RagnarokFate/StreamChats.git
-cd StreamChats
-npm install
-
-# Run the overlay UI in dev mode (hot reload)
-npm run dev -w apps/overlay-ui
-
-# Run the local server
-node apps/local-server/dist/index.js --twitch=ragnarokfate
-```
 
 ---
 

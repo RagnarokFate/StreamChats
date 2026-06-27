@@ -1,8 +1,8 @@
-import { ChatEvent, MessageFragment } from '@obs-chat/event-schema';
+import { StreamEvent, MessageFragment } from '@obs-chat/event-schema';
 import crypto from 'crypto';
 
-export function parseChatActions(actions: any[]): ChatEvent[] {
-  const events: ChatEvent[] = [];
+export function parseChatActions(actions: any[]): StreamEvent[] {
+  const events: StreamEvent[] = [];
   
   for (const rawAction of actions) {
     let action = rawAction;
@@ -16,7 +16,7 @@ export function parseChatActions(actions: any[]): ChatEvent[] {
     const rendererKey = Object.keys(itemContent)[0];
     const item = itemContent[rendererKey];
     
-    if (!item || !item.authorName) continue;
+    if (!item || (!item.authorName && rendererKey !== 'liveChatViewerEngagementMessageRenderer')) continue;
     
     const authorId = item.authorExternalChannelId || 'unknown';
     const authorName = item.authorName?.simpleText || 'Unknown';
@@ -30,7 +30,53 @@ export function parseChatActions(actions: any[]): ChatEvent[] {
       }
     }
     
-    // Process message fragments
+    const timestampUsec = item.timestampUsec;
+    const timestamp = timestampUsec ? new Date(parseInt(timestampUsec, 10) / 1000).toISOString() : new Date().toISOString();
+    const eventId = crypto.randomUUID();
+
+    if (rendererKey === 'liveChatPaidMessageRenderer' || rendererKey === 'liveChatPaidStickerRenderer') {
+      const amountText = item.purchaseAmountText?.simpleText || '';
+      // Very basic extraction of amount. Assuming it's something like "$5.00"
+      const numericAmount = parseFloat(amountText.replace(/[^0-9.]/g, '')) || 0;
+      const currency = amountText.replace(/[0-9., ]/g, '') || 'USD'; // Simplified currency extraction
+
+      let messageText = '';
+      if (item.message?.runs) {
+        messageText = item.message.runs.map((r: any) => r.text || r.emoji?.shortcuts?.[0] || '').join('');
+      }
+
+      events.push({
+        eventId,
+        platform: 'youtube',
+        timestamp,
+        type: 'superchat',
+        sender: { id: authorId, name: authorName },
+        amount: numericAmount,
+        currency: currency,
+        message: messageText || undefined,
+        tier: item.headerBackgroundColor?.toString(),
+        rawPayload: item
+      });
+      continue;
+    }
+
+    if (rendererKey === 'liveChatMembershipItemRenderer') {
+      const headerSubtext = item.headerSubtext?.runs?.map((r: any) => r.text).join('') || 'New Member';
+      
+      events.push({
+        eventId,
+        platform: 'youtube',
+        timestamp,
+        type: 'gift',
+        sender: { id: authorId, name: authorName },
+        giftType: 'membership',
+        giftCount: 1, // YT memberships are usually 1 at a time, or gift bombs are structured differently (SponsorshipsGiftPurchaseAnnouncementRenderer)
+        rawPayload: item
+      });
+      continue;
+    }
+
+    // Process message fragments for normal chat
     const fragments: MessageFragment[] = [];
     let fullText = '';
     
@@ -52,14 +98,7 @@ export function parseChatActions(actions: any[]): ChatEvent[] {
         }
       }
     } else {
-      // If it's a paid message but has no text, or a membership just show a generic text
-      if (rendererKey === 'liveChatMembershipItemRenderer') {
-        fullText = 'New Member!';
-      } else if (rendererKey === 'liveChatPaidMessageRenderer') {
-        fullText = item.purchaseAmountText?.simpleText || 'Super Chat!';
-      } else if (rendererKey === 'liveChatPaidStickerRenderer') {
-        fullText = item.purchaseAmountText?.simpleText || 'Super Sticker!';
-      } else if (rendererKey === 'liveChatViewerEngagementMessageRenderer') {
+      if (rendererKey === 'liveChatViewerEngagementMessageRenderer') {
         fullText = 'Engagement Message';
       } else {
         continue; // Skip unknown empty messages
@@ -67,11 +106,8 @@ export function parseChatActions(actions: any[]): ChatEvent[] {
       fragments.push({ type: 'text', text: fullText });
     }
     
-    const timestampUsec = item.timestampUsec;
-    const timestamp = timestampUsec ? new Date(parseInt(timestampUsec, 10) / 1000).toISOString() : new Date().toISOString();
-    
     events.push({
-      eventId: crypto.randomUUID(),
+      eventId,
       platform: 'youtube',
       timestamp,
       type: 'chat',
@@ -83,7 +119,9 @@ export function parseChatActions(actions: any[]): ChatEvent[] {
       message: {
         text: fullText,
         fragments
-      }
+      },
+      moderationStatus: 'visible',
+      rawPayload: item
     });
   }
   
