@@ -63,15 +63,11 @@ export function parseIRCMessage(message: string): TwitchIRCMessage | null {
   return parsedMessage;
 }
 
-export function normalizeChatEvent(ircMessage: TwitchIRCMessage): ChatEvent | null {
+export function parseStreamEvent(ircMessage: TwitchIRCMessage): import('@obs-chat/event-schema').StreamEvent | null {
   const commandParts = ircMessage.command.split(' ');
-  if (commandParts[0] !== 'PRIVMSG') {
-    return null;
-  }
+  const cmd = commandParts[0];
   
-  const text = ircMessage.parameters.trim();
   const tags = ircMessage.tags;
-  
   const authorName = tags.get('display-name') || ircMessage.source?.split('!')[0] || 'Unknown';
   const authorId = tags.get('user-id') || '0';
   const color = tags.get('color') || undefined;
@@ -79,76 +75,106 @@ export function normalizeChatEvent(ircMessage: TwitchIRCMessage): ChatEvent | nu
   const badgesRaw = tags.get('badges');
   const badges = badgesRaw ? badgesRaw.split(',') : [];
 
-  const fragments: MessageFragment[] = [];
-  
-  const emotesRaw = tags.get('emotes');
-  const emotePositions: { id: string, start: number, end: number }[] = [];
-  
-  if (emotesRaw) {
-    const emotes = emotesRaw.split('/');
-    for (const emote of emotes) {
-      const [id, positions] = emote.split(':');
-      if (!positions) continue;
-      const posList = positions.split(',');
-      for (const pos of posList) {
-        const [start, end] = pos.split('-');
-        emotePositions.push({ id, start: parseInt(start, 10), end: parseInt(end, 10) });
-      }
-    }
-  }
-  
-  emotePositions.sort((a, b) => a.start - b.start);
-  
-  let currentIdx = 0;
-  for (const emote of emotePositions) {
-    if (emote.start > currentIdx) {
-      fragments.push({
-        type: 'text',
-        text: text.slice(currentIdx, emote.start)
-      });
-    }
-    
-    // Safety check: ensure slicing is valid
-    const altText = emote.end + 1 <= text.length ? text.slice(emote.start, emote.end + 1) : '';
-    
-    fragments.push({
-      type: 'emote',
-      id: emote.id,
-      url: `https://static-cdn.jtvnbs.net/emoticons/v2/${emote.id}/default/dark/1.0`,
-      alt: altText
-    });
-    currentIdx = emote.end + 1;
-  }
-  
-  if (currentIdx < text.length) {
-    fragments.push({
-      type: 'text',
-      text: text.slice(currentIdx)
-    });
-  }
-
   const sentTs = tags.get('tmi-sent-ts');
   const timestamp = sentTs ? new Date(parseInt(sentTs, 10)).toISOString() : new Date().toISOString();
-  
-  // We need a proper UUID here. `tags.get('id')` is often a UUID from twitch, but let's ensure it is one
-  // Zod requires a strict UUID format. So we just generate a fresh one if twitch's id is not compliant, 
-  // but it usually is. For safety, we'll just generate one to guarantee valid ChatEvent.
   const eventId = crypto.randomUUID();
 
-  return {
-    eventId,
-    platform: 'twitch',
-    timestamp,
-    type: 'chat',
-    author: {
-      id: authorId,
-      name: authorName,
-      color,
-      badges
-    },
-    message: {
-      text,
-      fragments: fragments.length > 0 ? fragments : [{ type: 'text', text }]
+  if (cmd === 'PRIVMSG') {
+    const text = ircMessage.parameters.trim();
+    const fragments: MessageFragment[] = [];
+    
+    const emotesRaw = tags.get('emotes');
+    const emotePositions: { id: string, start: number, end: number }[] = [];
+    
+    if (emotesRaw) {
+      const emotes = emotesRaw.split('/');
+      for (const emote of emotes) {
+        const [id, positions] = emote.split(':');
+        if (!positions) continue;
+        const posList = positions.split(',');
+        for (const pos of posList) {
+          const [start, end] = pos.split('-');
+          emotePositions.push({ id, start: parseInt(start, 10), end: parseInt(end, 10) });
+        }
+      }
     }
-  };
+    
+    emotePositions.sort((a, b) => a.start - b.start);
+    
+    let currentIdx = 0;
+    for (const emote of emotePositions) {
+      if (emote.start > currentIdx) {
+        fragments.push({
+          type: 'text',
+          text: text.slice(currentIdx, emote.start)
+        });
+      }
+      
+      const altText = emote.end + 1 <= text.length ? text.slice(emote.start, emote.end + 1) : '';
+      
+      fragments.push({
+        type: 'emote',
+        id: emote.id,
+        url: `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`,
+        alt: altText
+      });
+      currentIdx = emote.end + 1;
+    }
+    
+    if (currentIdx < text.length) {
+      fragments.push({
+        type: 'text',
+        text: text.slice(currentIdx)
+      });
+    }
+
+    return {
+      eventId,
+      platform: 'twitch',
+      timestamp,
+      type: 'chat',
+      author: { id: authorId, name: authorName, color, badges },
+      message: {
+        text,
+        fragments: fragments.length > 0 ? fragments : [{ type: 'text', text }]
+      },
+      moderationStatus: 'visible',
+      rawPayload: ircMessage
+    };
+  }
+
+  if (cmd === 'USERNOTICE') {
+    const msgId = tags.get('msg-id');
+    
+    // Subscriptions and gifts
+    if (msgId === 'sub' || msgId === 'resub' || msgId === 'subgift' || msgId === 'anonsubgift') {
+      const giftType = msgId;
+      return {
+        eventId,
+        platform: 'twitch',
+        timestamp,
+        type: 'gift',
+        sender: { id: authorId, name: authorName },
+        giftType,
+        giftCount: 1,
+        rawPayload: ircMessage
+      };
+    }
+
+    // Raids
+    if (msgId === 'raid') {
+      const viewerCount = parseInt(tags.get('msg-param-viewerCount') || '0', 10);
+      return {
+        eventId,
+        platform: 'twitch',
+        timestamp,
+        type: 'raid',
+        raider: { id: authorId, name: authorName },
+        viewerCount,
+        rawPayload: ircMessage
+      };
+    }
+  }
+
+  return null;
 }

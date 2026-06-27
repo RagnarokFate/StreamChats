@@ -10,14 +10,18 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "ws": "^8.16.0",
+    "@obs-chat/connector-kick": "*",
     "@obs-chat/connector-sdk": "*",
+    "@obs-chat/connector-tiktok": "*",
     "@obs-chat/connector-twitch": "*",
     "@obs-chat/connector-youtube": "*",
-    "@obs-chat/connector-kick": "*",
-    "@obs-chat/connector-tiktok": "*",
+    "@obs-chat/event-bus": "*",
     "@obs-chat/event-schema": "*",
-    "@obs-chat/moderation-pipeline": "*"
+    "@obs-chat/identity": "*",
+    "@obs-chat/moderation-pipeline": "*",
+    "@obs-chat/obs-integration": "^1.0.0",
+    "@obs-chat/plugin-sdk": "^1.0.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/ws": "^8.5.10"

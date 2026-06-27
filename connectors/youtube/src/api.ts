@@ -12,7 +12,7 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
     ? `https://www.youtube.com/${channelOrVideoId}/live`
     : `https://www.youtube.com/watch?v=${channelOrVideoId}`;
     
-  const res = await fetch(url, {
+  let res = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
       'Accept-Language': 'en-US,en;q=0.9',
@@ -20,7 +20,25 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
   });
   
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = await res.text();
+  let html = await res.text();
+
+  // YouTube often doesn't redirect /@Channel/live to the /watch page directly for API requests.
+  // Instead, it serves a channel page containing the live video ID. 
+  // We extract that video ID and fetch the actual watch page to get the chat continuation.
+  if (channelOrVideoId.startsWith('@') && !html.includes('liveChatRenderer')) {
+    const videoIdMatch = html.match(/"videoId":"([^"]+)"/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      const videoUrl = `https://www.youtube.com/watch?v=${videoIdMatch[1]}`;
+      res = await fetch(videoUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      html = await res.text();
+    }
+  }
   
   const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
   if (!apiKeyMatch) throw new Error('API Key not found');
@@ -33,12 +51,14 @@ export async function fetchInitialData(channelOrVideoId: string): Promise<{ apiK
     const continuation = data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation 
       || data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.header?.liveChatHeaderRenderer?.viewSelector?.sortFilterSubMenuRenderer?.subMenuItems?.[1]?.continuation?.reloadContinuationData?.continuation;
       
-    if (!continuation) throw new Error('Continuation token not found');
+    if (!continuation) {
+      // Continuation token might not exist if the stream is offline
+      return null;
+    }
     
     return { apiKey: apiKeyMatch[1], continuation };
   } catch (e) {
     console.error('JSON parse error or missing token:', e);
-    // console.log('Snippet:', initialDataMatch[1].slice(0, 500)); // Uncomment to see
     throw new Error('Failed to parse initial data');
   }
 }

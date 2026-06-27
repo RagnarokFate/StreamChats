@@ -17,7 +17,7 @@ end
 local os_type = get_os()
 
 function script_description()
-    return "OBS Multi-Platform Realtime Chat Aggregator\n\nSpawns the local background server and manages chat extraction from Twitch and YouTube."
+    return "OBS Multi-Platform Realtime Chat Aggregator\n\nSpawns the local background server and manages chat extraction from Twitch and YouTube.\n\nNow supports Expanded Event Schemas: Gifts, SuperChats, Raids, and Follows."
 end
 
 function script_properties()

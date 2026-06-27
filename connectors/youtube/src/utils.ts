@@ -24,7 +24,10 @@ export function resolveInput(input: string): ResolvedInput {
       }
     }
   } catch (e) {
-    // Not a URL
+    // Not a URL. If it's not an 11-character video ID, assume it's a handle.
+    if (channelId.length !== 11 && !channelId.startsWith('@')) {
+      channelId = '@' + channelId;
+    }
   }
 
   return {
