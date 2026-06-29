@@ -1,0 +1,13 @@
+{
+  "name": "test-plugin",
+  "version": "1.0.0",
+  "description": "A StreamChats Plugin",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

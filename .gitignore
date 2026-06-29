@@ -4,3 +4,33 @@ build/
 *.log
 .env*
 coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Package manager
+*.tgz
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm
+
+# ONNX models (downloaded at runtime)
+*.onnx
+
+# Exports directory
+exports/
+
+# Tauri build outputs
+apps/desktop/src-tauri/target/

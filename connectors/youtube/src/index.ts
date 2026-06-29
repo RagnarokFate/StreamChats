@@ -103,7 +103,7 @@ export class YouTubeConnector extends BaseConnector {
       if (actions) {
         const events = parseChatActions(actions);
         for (const event of events) {
-          this.dispatchMessage(event);
+          this.dispatchEvent(event);
         }
       }
 

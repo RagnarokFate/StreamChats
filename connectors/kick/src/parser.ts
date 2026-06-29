@@ -1,11 +1,12 @@
-import { ChatEvent, Platform } from '@obs-chat/event-schema';
+import { StreamEvent } from '@obs-chat/event-schema';
 import crypto from 'crypto';
 
-export function parseKickMessage(dataString: string, channelId: string): ChatEvent | null {
+export function parseKickMessage(dataString: string, channelId: string): StreamEvent | null {
   try {
     const data = JSON.parse(dataString);
     
-    // Minimal normalization
+    // Check if it's a gift or something else here if Kick provides it in this event
+    // For now, assume chat message
     return {
       eventId: crypto.randomUUID(),
       platform: 'kick',
@@ -20,7 +21,9 @@ export function parseKickMessage(dataString: string, channelId: string): ChatEve
       message: {
         text: data.content || '',
         fragments: [{ type: 'text', text: data.content || '' }]
-      }
+      },
+      moderationStatus: 'visible',
+      rawPayload: data
     };
   } catch (e) {
     return null;

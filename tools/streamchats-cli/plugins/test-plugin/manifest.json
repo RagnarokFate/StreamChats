@@ -1,0 +1,12 @@
+{
+  "id": "test-plugin",
+  "name": "Test Plugin",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "description": "My awesome StreamChats plugin.",
+  "entryPoint": "dist/index.js",
+  "permissions": [
+    "read_chat",
+    "send_chat"
+  ]
+}

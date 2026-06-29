@@ -17,7 +17,7 @@ end
 local os_type = get_os()
 
 function script_description()
-    return "OBS Multi-Platform Realtime Chat Aggregator\n\nSpawns the local background server and manages chat extraction from Twitch and YouTube."
+    return "OBS Multi-Platform Realtime Chat Aggregator\n\nSpawns the local background server and manages chat extraction from Twitch and YouTube.\n\nNow supports Expanded Event Schemas: Gifts, SuperChats, Raids, and Follows."
 end
 
 function script_properties()
@@ -79,8 +79,8 @@ function stop_server()
     if not is_running then return end
     
     if os_type == "Windows" then
-        -- Kill only the Node process running our specific server script
-        os.execute('wmic process where "CommandLine like \'%apps\\\\local-server\\\\dist\\\\index.js%\'" call terminate >nul 2>&1')
+        -- Kill only the Node process running our specific server script using PowerShell instead of wmic (which is deprecated/removed in Win11)
+        os.execute('powershell -Command "Get-CimInstance Win32_Process | Where-Object CommandLine -match \'apps.*local-server.*dist.*index.js\' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"')
     else
         os.execute('pkill -f "apps/local-server/dist/index.js"')
     end
@@ -89,6 +89,7 @@ function stop_server()
 end
 
 function script_load(settings)
+    script_update(settings)
     start_server()
 end
 

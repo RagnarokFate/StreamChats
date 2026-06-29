@@ -1,0 +1,11 @@
+{
+  "bannedWords": [
+    "spam",
+    "troll",
+    "bot"
+  ],
+  "bannedWordAction": "mask",
+  "maskCharacter": "*",
+  "spamProtectionEnabled": true,
+  "platforms": {}
+}
