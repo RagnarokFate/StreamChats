@@ -18,6 +18,13 @@
 - Q: What should the default session data retention period be? → A: 14 days (2 weeks). Old session data is automatically rotated after this period. The retention period is configurable by the user.
 - Q: What delivery guarantee should the Event Bus provide? → A: At-least-once with consumer-managed offsets. Events are persisted to the local database; consumers track their last-processed offset and can catch up after downtime. Duplicates are dedupable via the existing event ID.
 
+### Session 2026-06-30
+
+- Q: What inline moderation actions should the Moderator view mode expose? → A: Full action set — shadow suppress, flag, ban word, timeout, view identity, and view toxicity score. This is a power-user mode for active stream moderation.
+- Q: Which platforms support outbound reply-to-platform messaging? → A: None — StreamChats operates with no login, API keys, or OAuth. Reply-to-platform is deferred to a future milestone when API/OAuth integration is added. All platforms are read-only.
+- Q: Should the AI toxicity model be bundled with the app or downloaded on demand? → A: Download on first enable — the ONNX model is downloaded when the user first toggles the toxicity filter on, with a progress indicator. Keeps the initial install lightweight.
+- Q: Should the system provide a database backup mechanism for disaster recovery? → A: Manual export/import — the dashboard provides "Backup Database" and "Restore Database" buttons that copy the SQLite file.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Resilient Multi-Platform Chat Aggregation (Priority: P1)
@@ -38,15 +45,15 @@ A streamer launches StreamChats and connects to Twitch, YouTube, Kick, and TikTo
 
 ### User Story 2 — Streamer Dashboard & OBS Control (Priority: P1)
 
-A streamer opens the local dashboard in their browser alongside OBS Studio. From a single interface, they can read all incoming chat messages across platforms, reply to viewers (with replies dispatched to the correct platform), monitor per-platform connection health, view real-time statistics (messages per minute, platform share, top chatters), and customize the overlay theme, fonts, and colors with a live preview. They can also place stream markers with a hotkey for later VOD editing. Changes to the overlay are reflected in OBS within seconds.
+A streamer opens the local dashboard in their browser alongside OBS Studio. From a single interface, they can read all incoming chat messages across platforms, monitor per-platform connection health, view real-time statistics (messages per minute, platform share, top chatters), and customize the overlay theme, fonts, and colors with a live preview. They can also place stream markers with a hotkey for later VOD editing. Changes to the overlay are reflected in OBS within seconds.
 
 **Why this priority**: The dashboard is the streamer's primary interaction surface. Without it, the product is a passive overlay — the dashboard transforms it into an active streaming tool.
 
-**Independent Test**: Can be tested by opening the dashboard, connecting to at least one platform, sending test messages, replying via the dashboard, verifying the reply appears on the platform, and confirming overlay changes propagate to OBS.
+**Independent Test**: Can be tested by opening the dashboard, connecting to at least one platform, sending test messages, and confirming overlay changes propagate to OBS.
 
 **Acceptance Scenarios**:
 
-1. **Given** the streamer opens the dashboard, **When** messages arrive from multiple platforms, **Then** all messages appear in a unified feed with platform badges and the streamer can reply to any message directly.
+1. **Given** the streamer opens the dashboard, **When** messages arrive from multiple platforms, **Then** all messages appear in a unified feed with platform badges.
 2. **Given** the streamer modifies font size or theme in the dashboard, **When** the change is saved, **Then** the OBS overlay reflects the update within 2 seconds.
 3. **Given** the streamer presses the marker hotkey during a stream, **When** the hotkey is triggered, **Then** a timestamped marker is logged locally for later review.
 4. **Given** a platform connector goes down, **When** the streamer views the health panel, **Then** they see the affected platform's status and can manually trigger a reconnection.
@@ -145,6 +152,7 @@ A streamer who uses StreamChats across multiple machines opts into the paid clou
 - What happens when the local database exceeds available disk space during a marathon session? → The system warns the streamer at 80% capacity and automatically rotates old session data beyond the default 14-day retention period (configurable by the user).
 - How does the desktop app handle OBS not being installed? → The app functions in standalone mode (browser-based overlay only) with a prompt to install OBS for the full experience.
 - What if the streamer's machine loses power during a session? → The durable local storage enables crash recovery, replaying events from the last checkpoint on next startup.
+- What if the SQLite database becomes corrupted or the machine fails permanently? → The dashboard provides manual "Backup Database" and "Restore Database" buttons. Users are responsible for creating periodic backups; the system does not automate backup scheduling.
 
 ## Requirements *(mandatory)*
 
@@ -154,23 +162,23 @@ A streamer who uses StreamChats across multiple machines opts into the paid clou
 
 - **FR-001**: System MUST route all platform events through a normalized pipeline (`Connector → Normalizer → Event Bus → Consumers`) that decouples event producers from consumers. The Event Bus MUST provide at-least-once delivery guarantees: events are persisted to the local database, each consumer tracks its own last-processed offset, and consumers can catch up after downtime. Duplicate events are dedupable via the unique event ID.
 - **FR-002**: System MUST implement a Connector Supervisor with circuit breakers that isolate individual platform failures, apply health checks, and use exponential backoff for reconnection.
-- **FR-003**: System MUST persist all events to a local embedded database, enabling session recording, crash recovery, and post-stream analytics. Session data MUST be automatically rotated after a configurable retention period (default: 14 days), with a warning issued at 80% disk capacity.
+- **FR-003**: System MUST persist all events to a local embedded database, enabling session recording, crash recovery, and post-stream analytics. Session data MUST be automatically rotated after a configurable retention period (default: 14 days), with a warning issued at 80% disk capacity. The dashboard MUST provide manual "Backup Database" and "Restore Database" controls that export/import the SQLite file for disaster recovery.
 - **FR-004**: System MUST support an expanded event schema covering at minimum: `ChatEvent`, `GiftEvent`, `FollowEvent`, `RaidEvent`, and `SuperChatEvent`, each with platform-specific metadata normalized into a common format.
 - **FR-005**: System MUST be packageable as a native desktop application that runs without requiring the user to install runtime dependencies.
 
 **OBS Integration & Streamer UX**
 
-- **FR-006**: System MUST provide a two-way broadcaster dashboard where the streamer can read chat from all platforms and reply to messages, with replies dispatched to the correct originating platform.
+- **FR-006**: System MUST provide a broadcaster dashboard where the streamer can read chat from all platforms in a unified interface with platform badges, health monitoring, and real-time statistics. *(Reply-to-platform is deferred — requires API/OAuth integration not yet in scope.)*
 - **FR-007**: System MUST integrate with the obs-websocket protocol to automatically create/update browser sources, switch scenes based on configurable triggers, and display connector health.
 - **FR-008**: System MUST support global hotkey-based stream markers that log local timestamps for VOD editing.
 - **FR-009**: System MUST enable session recording with timestamped chat logs that can be replayed alongside offline VODs.
 - **FR-010**: System MUST provide a visual theme editor with live preview, allowing users to customize colors, fonts, and animations before applying changes to the OBS overlay.
-- **FR-011**: System MUST support multiple chat view modes: Unified (default on first load), Split-screen (by platform), Priority-platform (weighted display), and Moderator (with moderation actions inline). The dashboard MUST default to Unified mode, showing all platforms in a single chronological feed, with the user able to switch modes at any time.
+- **FR-011**: System MUST support multiple chat view modes: Unified (default on first load), Split-screen (by platform), Priority-platform (weighted display), and Moderator (with moderation actions inline). The dashboard MUST default to Unified mode, showing all platforms in a single chronological feed, with the user able to switch modes at any time. The Moderator view mode MUST expose the full inline action set per message: shadow suppress, flag, ban word, timeout, view linked identity, and view toxicity score.
 
 **Moderation & Safety**
 
 - **FR-012**: System MUST support cross-platform identity linking, allowing the streamer to group multiple viewer accounts into a single unified identity with a combined reputation score. The reputation score MUST be computed as a weighted behavioral composite of positive signals (message count, gifts/subscriptions, watch time, engagement) and negative signals (moderation actions, spam flags, shadow-suppressed messages), with streamer-adjustable category weights.
-- **FR-013**: System MUST provide a local moderation pipeline capable of detecting toxicity and context-specific spam without sending any chat data to external services.
+- **FR-013**: System MUST provide a local moderation pipeline capable of detecting toxicity and context-specific spam without sending any chat data to external services. The AI toxicity model (quantized ONNX) MUST NOT be bundled with the application; it MUST be downloaded on first use when the user enables the toxicity filter, with a progress indicator during download.
 - **FR-014**: System MUST implement shadow suppression — hiding flagged messages from the local overlay without deleting or actioning them on the native platform.
 - **FR-015**: System MUST auto-detect rapid message influxes (raids) and auto-collapse repeated identical messages with a count indicator.
 
@@ -206,7 +214,7 @@ A streamer who uses StreamChats across multiple machines opts into the paid clou
 ### Measurable Outcomes
 
 - **SC-001**: When a single platform connector fails, the remaining connected platforms continue delivering messages with zero interruption. Recovery occurs within 60 seconds via automated retry.
-- **SC-002**: The streamer can read, filter, and reply to chat messages from all connected platforms through a single dashboard interface, with replies appearing on the target platform within 3 seconds.
+- **SC-002**: The streamer can read and filter chat messages from all connected platforms through a single dashboard interface with platform badges, health indicators, and real-time statistics.
 - **SC-003**: Overlay customization changes (theme, font, color) made in the dashboard are reflected in the OBS Browser Source within 2 seconds.
 - **SC-004**: The local moderation pipeline processes and classifies messages in under 200ms per message with no chat data leaving the local machine.
 - **SC-005**: Post-stream analytics are generated within 30 seconds of session end for streams up to 8 hours in duration.
@@ -225,8 +233,8 @@ A streamer who uses StreamChats across multiple machines opts into the paid clou
 - The local-first philosophy remains the core product principle — cloud features are always opt-in and supplementary.
 - Streamers have a stable local network connection but may not have reliable internet for all platforms simultaneously.
 - The desktop wrapper will use a lightweight framework (such as Tauri) rather than a heavier solution to maintain the low-resource-usage principle.
-- The local AI moderation pipeline will use small, quantized models that can run on consumer hardware (8GB+ RAM) without requiring a dedicated GPU.
-- Reply-to-platform functionality depends on platform API support — platforms that do not expose a send-message API will show a "read-only" indicator.
+- The local AI moderation pipeline will use small, quantized models that can run on consumer hardware (8GB+ RAM) without requiring a dedicated GPU. The ONNX toxicity model (~80MB) is not bundled — it is downloaded on first use when the user enables the toxicity filter.
+- Reply-to-platform functionality is deferred to a future milestone. StreamChats currently operates without login, API keys, or OAuth — all platform connections are read-only (inbound chat scraping only). When API/OAuth integration is added, reply support will be implemented per-platform.
 - The Studio Edition (B2B) is a future milestone that will be developed after the core product reaches maturity.
 - Mobile browser access to the dashboard is out of scope for the initial roadmap — desktop browser and OBS Browser Source are the primary targets.
 - The marketplace will initially be a local registry (curated JSON catalog) before evolving into a networked discovery system.
