@@ -1,4 +1,5 @@
-import { EventBusStore } from '@obs-chat/event-bus';
+import { EventStore } from '@obs-chat/event-bus';
+import { StreamStatistics, ChatEvent, SuperChatEvent, GiftEvent, StreamEvent } from '@obs-chat/event-schema';
 
 export interface AnalyticsSummary {
   sessionId: string;
@@ -11,9 +12,10 @@ export interface AnalyticsSummary {
 }
 
 export class AnalyticsEngine {
-  private store: EventBusStore;
+  private store: EventStore;
+  private currentStats: Map<string, StreamStatistics> = new Map();
 
-  constructor(store: EventBusStore) {
+  constructor(store: EventStore) {
     this.store = store;
   }
 
@@ -28,10 +30,10 @@ export class AnalyticsEngine {
     const chatters = new Set<string>();
     const timestamps: number[] = [];
 
-    events.forEach(row => {
+    events.forEach((row: any) => {
       const payload = JSON.parse(row.payload);
       if (payload.author?.id) {
-        chatters.add(payload.author.id);
+        chatters.add(`${payload.platform}:${payload.author.id}`);
       }
       if (payload.timestamp) {
         timestamps.push(new Date(payload.timestamp).getTime());
@@ -58,13 +60,14 @@ export class AnalyticsEngine {
       }
     }
 
-    const startTs = new Date(session.started_at).getTime();
-    const endTs = session.ended_at ? new Date(session.ended_at).getTime() : Date.now();
-    const durationMinutes = Math.max(1, Math.round((endTs - startTs) / 60000));
+    const startTs = new Date(session.startedAt).getTime();
+    const durationMs = session.endedAt 
+      ? new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime() : 0;
+    const durationMinutes = Math.max(1, Math.round(durationMs / 60000));
 
     return {
       sessionId,
-      totalMessages: session.total_events,
+      totalMessages: session.totalEvents,
       totalUniqueChatters: chatters.size,
       messagesByPlatform,
       eventsByType,
@@ -83,9 +86,9 @@ export class AnalyticsEngine {
     const platformShare: Record<string, number> = {};
     const chatterCounts = new Map<string, { name: string, platform: any, count: number }>();
 
-    events.forEach(row => {
+    events.forEach((row: any) => {
       try {
-        const payload = JSON.parse(row.payload);
+        const payload = JSON.parse(row.payload) as StreamEvent;
         if (payload.type === 'chat') {
           platformShare[payload.platform] = (platformShare[payload.platform] || 0) + 1;
           
@@ -159,12 +162,16 @@ export class AnalyticsEngine {
     const events = this.store.getEventsBySession(sessionId);
     const buckets = new Map<number, number>();
 
-    events.forEach(row => {
-      const payload = JSON.parse(row.payload);
-      if (payload.timestamp) {
-        const ts = new Date(payload.timestamp).getTime();
-        const bucket = Math.floor(ts / bucketSizeMs) * bucketSizeMs;
-        buckets.set(bucket, (buckets.get(bucket) || 0) + 1);
+    events.forEach((row: any) => {
+      try {
+        const payload = JSON.parse(row.payload) as StreamEvent;
+        if (payload.timestamp) {
+          const ts = new Date(payload.timestamp).getTime();
+          const bucket = Math.floor(ts / bucketSizeMs) * bucketSizeMs;
+          buckets.set(bucket, (buckets.get(bucket) || 0) + 1);
+        }
+      } catch (e) {
+        // ignore invalid json
       }
     });
 

@@ -35,6 +35,7 @@ var CircuitState;
     CircuitState["HALF_OPEN"] = "HALF_OPEN";
 })(CircuitState || (exports.CircuitState = CircuitState = {}));
 __exportStar(require("./logger"), exports);
+__exportStar(require("./supervisor"), exports);
 /**
  * The BaseConnector defines the strict contract for all platform extractors.
  * It manages the standard EventEmitter lifecycle, state transitions,
@@ -124,6 +125,9 @@ class BaseConnector extends events_1.EventEmitter {
     getStatus() {
         return this.status;
     }
+    getChannelId() {
+        return this.options.channelId;
+    }
     setStatus(newStatus) {
         this.status = newStatus;
         this.emit('status_change', this.status);
@@ -207,20 +211,7 @@ class BaseConnector extends events_1.EventEmitter {
     }
     // ── Event Dispatch ─────────────────────────────────────────────────────
     /**
-     * Dispatches a strictly validated ChatEvent to the listeners.
-     * (Backward compatible — preserved from v1)
-     */
-    dispatchMessage(event) {
-        if (this.status === ConnectorStatus.CONNECTED) {
-            this.totalEvents++;
-            this.lastEventTime = new Date();
-            this.recordSuccess();
-            this.emit('chat_message', event);
-        }
-    }
-    /**
      * Generic event dispatch for all StreamEvent types (v2).
-     * Works alongside dispatchMessage() for backward compatibility.
      */
     dispatchEvent(event) {
         if (this.status === ConnectorStatus.CONNECTED || this.status === ConnectorStatus.PAUSED) {
@@ -230,10 +221,6 @@ class BaseConnector extends events_1.EventEmitter {
             this.lastLatencyMs = Date.now() - startTime;
             this.recordSuccess();
             this.emit('stream_event', event);
-            // Backward compatibility: also emit chat_message for chat events
-            if (event.type === 'chat') {
-                this.emit('chat_message', event);
-            }
         }
     }
     /**

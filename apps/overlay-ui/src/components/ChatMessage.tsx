@@ -7,9 +7,10 @@ interface Props {
   onAnimationComplete?: (eventId: string) => void;
   identities?: any[];
   accounts?: any[];
+  sendCommand?: (command: any) => void;
 }
 
-export function ChatMessage({ message, onAnimationComplete, identities = [], accounts = [] }: Props) {
+export function ChatMessage({ message, onAnimationComplete, identities = [], accounts = [], sendCommand }: Props) {
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const { settings } = useSettings();
 
@@ -36,7 +37,7 @@ export function ChatMessage({ message, onAnimationComplete, identities = [], acc
   const linkedAccount = accounts.find(a => a.platform === message.platform && a.platformUserId === message.author.id);
   const linkedIdentity = linkedAccount ? identities.find(i => i.id === linkedAccount.identityId) : null;
 
-  const isSuppressed = (message as any).moderationStatus === 'suppressed';
+  const isSuppressed = message.moderationStatus === 'suppressed';
 
   const renderContent = () => {
     if (message.type === 'gift') {
@@ -44,6 +45,9 @@ export function ChatMessage({ message, onAnimationComplete, identities = [], acc
     }
     if (message.type === 'raid') {
       return <span className="event-raid-text">⚔️ Raiding with a party of {message.viewerCount}</span>;
+    }
+    if (message.type === 'follow') {
+      return <span className="event-follow-text">🌟 New Follower!</span>;
     }
     if (message.type === 'superchat') {
       const tierStyle = message.tier ? { borderLeft: `4px solid #${message.tier}` } : {};
@@ -96,6 +100,7 @@ export function ChatMessage({ message, onAnimationComplete, identities = [], acc
     let cls = `chat-message ${isAnimatingOut ? 'animate-out' : 'animate-in'}`;
     if (message.type === 'gift') cls += ' chat-event-gift';
     if (message.type === 'raid') cls += ' chat-event-raid';
+    if (message.type === 'follow') cls += ' chat-event-follow';
     if (message.type === 'superchat') cls += ' chat-event-superchat';
     if (isSuppressed) cls += ' chat-event-suppressed';
     return cls;
@@ -116,6 +121,22 @@ export function ChatMessage({ message, onAnimationComplete, identities = [], acc
       <div className="chat-message-text">
         {renderContent()}
       </div>
+      {settings.viewMode === 'moderator' && sendCommand && message.type === 'chat' && !isSuppressed && (
+        <div className="moderator-actions" style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+          <button 
+            onClick={() => sendCommand({ type: 'command', action: 'timeout', payload: { userId: message.author.id, duration: 60, platform: message.platform } })} 
+            style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+          >
+            Timeout 60s
+          </button>
+          <button 
+            onClick={() => sendCommand({ type: 'command', action: 'ban', payload: { userId: message.author.id, platform: message.platform } })} 
+            style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+          >
+            Ban
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ export const PluginManifestSchema = z.object({
   author: z.string().optional(),
   description: z.string().max(500).optional(),
   entryPoint: z.string().default('dist/index.js'),
-  permissions: z.array(z.enum(['read_chat', 'send_chat', 'moderate_chat'])).default([]),
+  permissions: z.array(z.enum(['read_chat', 'send_chat', 'moderate_chat', 'network', 'filesystem'])).default([]),
 });
 
 export type PluginManifest = z.infer<typeof PluginManifestSchema>;

@@ -96,10 +96,13 @@ export class ModerationPipeline extends EventEmitter {
     processed = this.shadowSuppress.handle(processed);
 
     // 2. Rate Limiting / Raid detection
-    processed = this.rateLimiter.handle(processed);
+    if (this.options.spamProtectionEnabled) {
+      processed = this.rateLimiter.handle(processed);
+    }
 
     // 3. Toxicity Filtering (async)
-    if ((processed as any).moderationStatus !== 'suppressed') {
+    if (this.options.aiToxicityEnabled && (processed as any).moderationStatus !== 'suppressed') {
+      this.toxicityFilter.setThreshold(this.options.aiToxicityThreshold ?? 0.8);
       processed = await this.toxicityFilter.handle(processed);
     }
 
@@ -109,12 +112,8 @@ export class ModerationPipeline extends EventEmitter {
     }
 
     // 4. Emit safe message back to server
-    // Note: We emit `chat_message` for legacy pipeline and `stream_event` for v2
-    if (processed.type === 'chat') {
-       this.emit('chat_message', processed);
-    } else {
-       this.emit('stream_event', processed);
-    }
+    // Note: We emit `stream_event` for v2 architecture which handles all stream events
+    this.emit('stream_event', processed);
   }
 
   public getHistory(): string[] {
@@ -123,5 +122,8 @@ export class ModerationPipeline extends EventEmitter {
 
   public updateConfig(newOptions: Partial<ModerationOptions>) {
     this.options = { ...this.options, ...newOptions };
+    if (this.options.aiToxicityEnabled) {
+      this.toxicityFilter.init().catch(console.error);
+    }
   }
 }

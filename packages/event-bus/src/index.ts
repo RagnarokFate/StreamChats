@@ -1,243 +1,123 @@
-import { EventEmitter } from 'events';
-import { StreamEvent, PersistedEvent, StreamEventType } from '@obs-chat/event-schema';
-import { EventBusStore } from './store';
-import { EventBusConsumer, SimpleConsumer } from './consumer';
-import { StreamSessionManager } from './session';
+import { StreamEvent, PersistedEvent } from '@obs-chat/event-schema';
+import { EventStore } from './store';
+import { SessionManager } from './session';
 
-export { EventBusStore } from './store';
-export { EventBusConsumer, SimpleConsumer } from './consumer';
-export { StreamSessionManager } from './session';
+export * from './store';
+export * from './session';
 
-const MAX_RETRIES = 3;
+export type EventCallback = (event: PersistedEvent) => void | Promise<void>;
 
-/**
- * EventBus — the central message backbone of StreamChats.
- *
- * Implements persist-first publish with at-least-once delivery:
- * 1. Events are persisted to SQLite before dispatch
- * 2. Consumers track their own offsets
- * 3. On restart, consumers replay from their last offset
- */
-export class EventBus extends EventEmitter {
-  private store: EventBusStore;
-  private sessionManager: StreamSessionManager;
-  private consumers: Map<string, EventBusConsumer> = new Map();
-  private isRunning: boolean = false;
+export class EventBus {
+  private store: EventStore;
+  private sessionManager: SessionManager;
+  private subscribers: Map<string, { callback: EventCallback; lastOffset: number }> = new Map();
 
-  constructor(dbPath?: string, retentionDays?: number) {
-    super();
-    this.store = new EventBusStore(dbPath);
-    this.sessionManager = new StreamSessionManager(this.store, retentionDays);
+  constructor(dbPath?: string) {
+    this.store = new EventStore(dbPath);
+    this.sessionManager = new SessionManager(this.store);
   }
 
-  /**
-   * Initialize the Event Bus with a new session.
-   */
-  initialize(platforms: string[]): string {
-    const sessionId = this.sessionManager.initialize(platforms);
-    this.isRunning = true;
-    return sessionId;
-  }
-
-  /**
-   * Get the underlying store for direct queries (analytics, export).
-   */
-  getStore(): EventBusStore {
+  public getStore(): EventStore {
     return this.store;
   }
 
-  /**
-   * Get the session manager.
-   */
-  getSessionManager(): StreamSessionManager {
+  public getSessionManager(): SessionManager {
     return this.sessionManager;
   }
 
   /**
-   * Get the current session ID.
+   * Publishes an event to the bus. It persists the event and then notifies subscribers.
    */
-  getCurrentSessionId(): string | null {
-    return this.sessionManager.getCurrentSessionId();
-  }
-
-
-
-  /**
-   * Publish an event: persist to SQLite first, then dispatch to all consumers.
-   * This is the core at-least-once delivery mechanism.
-   */
-  async publish(event: StreamEvent): Promise<PersistedEvent> {
-    const sessionId = this.sessionManager.getCurrentSessionId();
-    if (!sessionId) {
-      throw new Error('No active session. Call initialize() first.');
+  public publish(event: StreamEvent): PersistedEvent | null {
+    const session = this.sessionManager.getActiveSession();
+    if (!session) {
+      console.warn('Cannot publish event: No active session');
+      return null;
     }
 
-    // Step 1: Persist to SQLite (this is the source of truth)
-    const sequenceNumber = this.store.persistEvent(event, sessionId);
+    const seq = this.store.persistEvent(
+      session.sessionId,
+      event.type,
+      event.eventId,
+      event.timestamp,
+      event
+    );
 
-    // Step 2: Create the persisted event with assigned fields
     const persistedEvent: PersistedEvent = {
       ...event,
-      sequenceNumber,
-      sessionId,
-    } as PersistedEvent;
+      sequenceNumber: seq,
+      sessionId: session.sessionId,
+    };
 
-    // Step 3: Dispatch to all registered consumers
-    await this.dispatchToConsumers(persistedEvent);
+    // Update session metrics in memory
+    session.totalEvents++;
+    session.lastSequenceNumber = seq;
 
-    // Step 4: Emit for any EventEmitter listeners
-    this.emit('event', persistedEvent);
+    // Notify subscribers asynchronously
+    setImmediate(() => {
+      this.notifySubscribers(persistedEvent);
+    });
 
     return persistedEvent;
   }
 
   /**
-   * Register a consumer to receive events.
+   * Subscribes to the event bus. If fromOffset is provided, it replays missed events.
    */
-  registerConsumer(consumer: EventBusConsumer): void {
-    this.consumers.set(consumer.consumerId, consumer);
-    console.log(`[EventBus] Registered consumer: ${consumer.consumerId} (filter: ${consumer.eventFilter.length === 0 ? 'all' : consumer.eventFilter.join(', ')})`);
-  }
-
-  /**
-   * Convenience method to register a callback-based consumer.
-   */
-  subscribe(
-    consumerId: string,
-    handler: (event: PersistedEvent) => Promise<void>,
-    eventFilter: StreamEventType[] = []
-  ): SimpleConsumer {
-    const consumer = new SimpleConsumer(consumerId, handler, eventFilter);
-    this.registerConsumer(consumer);
-    return consumer;
-  }
-
-  /**
-   * Unregister a consumer.
-   */
-  unregisterConsumer(consumerId: string): void {
-    this.consumers.delete(consumerId);
-    console.log(`[EventBus] Unregistered consumer: ${consumerId}`);
-  }
-
-  /**
-   * Replay events from a given sequence number for a specific consumer.
-   * Used on consumer startup to catch up from last offset.
-   */
-  async replayFrom(
-    consumerId: string,
-    fromSequenceNumber: number = 0,
-    filter?: StreamEventType[]
-  ): Promise<number> {
-    const consumer = this.consumers.get(consumerId);
-    if (!consumer) {
-      throw new Error(`Consumer not found: ${consumerId}`);
+  public subscribe(consumerId: string, callback: EventCallback, fromOffset: number = 0): void {
+    this.subscribers.set(consumerId, { callback, lastOffset: fromOffset });
+    
+    // Replay logic
+    if (fromOffset > 0) {
+      setImmediate(() => {
+        this.replay(consumerId, fromOffset);
+      });
     }
+  }
 
-    const events = this.store.getEventsFrom(fromSequenceNumber, filter);
-    let replayed = 0;
+  public unsubscribe(consumerId: string): void {
+    this.subscribers.delete(consumerId);
+  }
 
-    for (const row of events) {
-      const event = JSON.parse(row.payload) as PersistedEvent;
-      (event as any).sequenceNumber = row.sequence_number;
-
-      if (this.matchesFilter(event, consumer.eventFilter)) {
-        await this.deliverToConsumer(consumer, event);
-        replayed++;
+  private notifySubscribers(event: PersistedEvent): void {
+    for (const [id, sub] of this.subscribers.entries()) {
+      if (sub.lastOffset < event.sequenceNumber) {
+        try {
+          sub.callback(event);
+          sub.lastOffset = event.sequenceNumber;
+        } catch (e) {
+          console.error(`Consumer ${id} failed to process event ${event.sequenceNumber}`, e);
+        }
       }
     }
-
-    console.log(`[EventBus] Replayed ${replayed} events for consumer: ${consumerId} (from seq: ${fromSequenceNumber})`);
-    return replayed;
   }
 
-  /**
-   * Replay a consumer from its last saved offset.
-   */
-  async replayConsumerFromOffset(consumerId: string): Promise<number> {
-    const offset = this.store.getOffset(consumerId) || 0;
-    const consumer = this.consumers.get(consumerId);
-    if (!consumer) {
-      throw new Error(`Consumer not found: ${consumerId}`);
-    }
-    return this.replayFrom(consumerId, offset, consumer.eventFilter);
-  }
+  private replay(consumerId: string, fromOffset: number): void {
+    const sub = this.subscribers.get(consumerId);
+    if (!sub) return;
 
-  /**
-   * Get the latest sequence number in the event log.
-   */
-  getLatestSequenceNumber(): number {
-    return this.store.getLatestSequenceNumber();
-  }
+    let currentOffset = fromOffset;
+    let hasMore = true;
 
-  /**
-   * Create a stream marker at the current point.
-   */
-  createMarker(label?: string): string | null {
-    const sessionId = this.sessionManager.getCurrentSessionId();
-    if (!sessionId) return null;
-    return this.store.createMarker(sessionId, label);
-  }
+    while (hasMore) {
+      const events = this.store.getEventsAfter(currentOffset, 100);
+      if (events.length === 0) {
+        hasMore = false;
+        break;
+      }
 
-  /**
-   * Dispatch an event to all matching consumers.
-   */
-  private async dispatchToConsumers(event: PersistedEvent): Promise<void> {
-    const promises: Promise<void>[] = [];
-
-    for (const consumer of this.consumers.values()) {
-      if (this.matchesFilter(event, consumer.eventFilter)) {
-        promises.push(this.deliverToConsumer(consumer, event));
+      for (const ev of events) {
+        // If consumer unsubscribed during replay, abort
+        if (!this.subscribers.has(consumerId)) return;
+        
+        try {
+          sub.callback(ev);
+          sub.lastOffset = ev.sequenceNumber;
+        } catch (e) {
+          console.error(`Consumer ${consumerId} failed to process replay event ${ev.sequenceNumber}`, e);
+        }
+        currentOffset = ev.sequenceNumber;
       }
     }
-
-    // Don't await in parallel to preserve ordering per consumer
-    // Each consumer gets events sequentially
-    await Promise.allSettled(promises);
-  }
-
-  /**
-   * Deliver an event to a single consumer with retry logic.
-   */
-  private async deliverToConsumer(consumer: EventBusConsumer, event: PersistedEvent): Promise<void> {
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        await consumer.onEvent(event);
-        // Update consumer offset on success
-        this.store.setOffset(consumer.consumerId, event.sequenceNumber);
-        return;
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-        console.error(`[EventBus] Consumer ${consumer.consumerId} failed on event ${event.eventId} (attempt ${attempt}/${MAX_RETRIES}):`, lastError.message);
-      }
-    }
-
-    // All retries exhausted
-    this.emit('consumer_error', {
-      consumerId: consumer.consumerId,
-      eventId: event.eventId,
-      error: lastError,
-    });
-  }
-
-  /**
-   * Check if an event matches a consumer's filter.
-   */
-  private matchesFilter(event: PersistedEvent, filter: StreamEventType[]): boolean {
-    if (filter.length === 0) return true; // Empty filter = all events
-    return filter.includes(event.type as StreamEventType);
-  }
-
-  /**
-   * Gracefully shut down the Event Bus.
-   */
-  async shutdown(): Promise<void> {
-    this.isRunning = false;
-    this.sessionManager.destroy();
-    this.store.close();
-    this.consumers.clear();
-    console.log('[EventBus] Shut down gracefully');
   }
 }

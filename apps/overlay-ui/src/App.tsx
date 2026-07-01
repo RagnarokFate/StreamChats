@@ -5,7 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { Routes, Route } from 'react-router-dom';
 import { useSettings } from './hooks/useSettings';
 
-const VALID_THEMES = ['glass', 'minimal', 'neon', 'classic', 'retro', 'bubble', 'holographic', 'comic', 'terminal'];
+const VALID_THEMES = ['glass', 'minimal', 'neon', 'classic', 'retro', 'bubble', 'holographic', 'comic', 'terminal', 'high-contrast'];
 
 function getTheme(settingsTheme: string): string {
   const params = new URLSearchParams(window.location.search);
@@ -22,6 +22,9 @@ function App() {
   if (isReaderMode) {
     document.body.setAttribute('data-reader', 'true');
     document.body.setAttribute('data-theme', theme);
+    if (settings.backgroundColor) {
+      document.body.style.backgroundColor = settings.backgroundColor;
+    }
   }
 
   const portStr = window.location.port;
@@ -45,7 +48,7 @@ function App() {
     '--msg-font': `"${settings.fontFamily}", sans-serif`,
     '--msg-text-size': `${settings.fontSize}px`,
     '--msg-weight': settings.fontWeight,
-    backgroundColor: 'transparent' // Default overlay background
+    backgroundColor: settings.backgroundColor || 'transparent'
   } as React.CSSProperties;
 
   return (

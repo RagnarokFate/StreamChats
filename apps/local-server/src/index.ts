@@ -1,13 +1,15 @@
+import crypto from 'crypto';
 import { TwitchConnector } from '@obs-chat/connector-twitch';
 import { YouTubeConnector } from '@obs-chat/connector-youtube';
 import { KickConnector } from '@obs-chat/connector-kick';
 import { TikTokConnector } from '@obs-chat/connector-tiktok';
-import { ModerationPipeline } from '@obs-chat/moderation-pipeline';
+import { ConnectorSupervisor, ConnectorStatus } from '@obs-chat/connector-sdk';
 import { EventBus } from '@obs-chat/event-bus';
 import { ChatServer } from './server';
-import { Platform, StatusUpdateEvent, PlatformStatus, StreamEvent } from '@obs-chat/event-schema';
+import { Platform, StatusUpdateEvent, PlatformStatus, StreamEvent, PersistedEvent } from '@obs-chat/event-schema';
 import { loadConfig, getConfig } from './config';
-import { logger, chatLogger } from './utils/logger';
+import { logger } from './utils/logger';
+import { PluginManager, MarketplaceClient } from '@obs-chat/plugin-sdk';
 
 async function bootstrap() {
   logger.info('Starting Local OBS Chat Server...');
@@ -21,47 +23,42 @@ async function bootstrap() {
   let port = 9090;
 
   for (const arg of args) {
-    if (arg.startsWith('--twitch=')) {
-      twitchChannel = arg.substring('--twitch='.length);
-    } else if (arg.startsWith('--youtube=')) {
-      youtubeChannel = arg.substring('--youtube='.length);
-    } else if (arg.startsWith('--kick=')) {
-      kickChannel = arg.substring('--kick='.length);
-    } else if (arg.startsWith('--tiktok=')) {
-      tiktokChannel = arg.substring('--tiktok='.length);
-    } else if (arg.startsWith('--port=')) {
-      port = parseInt(arg.substring('--port='.length), 10);
-    }
+    if (arg.startsWith('--twitch=')) twitchChannel = arg.substring('--twitch='.length);
+    else if (arg.startsWith('--youtube=')) youtubeChannel = arg.substring('--youtube='.length);
+    else if (arg.startsWith('--kick=')) kickChannel = arg.substring('--kick='.length);
+    else if (arg.startsWith('--tiktok=')) tiktokChannel = arg.substring('--tiktok='.length);
+    else if (arg.startsWith('--port=')) port = parseInt(arg.substring('--port='.length), 10);
   }
 
-  // 1. Initialize Event Bus and Load Config
+  // 1. Initialize Event Bus and Session
   const serverConfig = loadConfig();
-  const eventBus = new EventBus();
-  const activePlatforms: string[] = [];
+  const eventBus = new EventBus('streamchats.db');
   
-  const finalTwitch = twitchChannel || serverConfig.platforms?.twitch;
-  const finalYoutube = youtubeChannel || serverConfig.platforms?.youtube;
-  const finalKick = kickChannel || serverConfig.platforms?.kick;
-  const finalTiktok = tiktokChannel || serverConfig.platforms?.tiktok;
+  const activePlatforms: Platform[] = [];
+  if (twitchChannel || serverConfig.platforms?.twitch) activePlatforms.push('twitch');
+  if (youtubeChannel || serverConfig.platforms?.youtube) activePlatforms.push('youtube');
+  if (kickChannel || serverConfig.platforms?.kick) activePlatforms.push('kick');
+  if (tiktokChannel || serverConfig.platforms?.tiktok) activePlatforms.push('tiktok');
+  
+  // T022: Session management
+  const sessionManager = eventBus.getSessionManager();
+  // check for crashed sessions (implicitly done in getActiveSession)
+  const session = sessionManager.startSession(activePlatforms);
+  logger.info(`Event Bus initialized. Session: ${session.sessionId}`);
 
-  if (finalTwitch) activePlatforms.push('twitch');
-  if (finalYoutube) activePlatforms.push('youtube');
-  if (finalKick) activePlatforms.push('kick');
-  if (finalTiktok) activePlatforms.push('tiktok');
-  
-  const sessionId = eventBus.initialize(activePlatforms);
-  logger.info(`Event Bus initialized. Session: ${sessionId}`);
+  // T016 & T023: Connector Supervisor
+  const supervisor = new ConnectorSupervisor({ healthCheckIntervalMs: 5000 });
+
+  // T064: Plugin Ecosystem
+  const pluginManager = new PluginManager(eventBus);
+  pluginManager.setApprovedPermissions(serverConfig.pluginPermissions || {});
+  await pluginManager.loadAllPlugins();
+  const marketplace = new MarketplaceClient();
 
   // 2. Start WebSocket Server
-  const server = new ChatServer(port, eventBus, (command) => {
-    if (command.action === 'reset_stats') {
-      Object.values(streamStats).forEach(s => {
-        s.totalMessages = 0;
-        s.chatters.clear();
-        s.recentTimestamps = [];
-      });
-      logger.info('Stream statistics reset manually.');
-    } else if (command.action === 'manage_platform') {
+  const server = new ChatServer(port, eventBus, async (cmd: any) => {
+    const command = cmd as any;
+    if (command.action === 'manage_platform') {
       const { platform, action, username } = command.payload;
       if (platform === 'custom') return;
       
@@ -69,244 +66,445 @@ async function bootstrap() {
       const currentConfig = loadConfig();
       if (!currentConfig.platforms) currentConfig.platforms = {};
       
-      if (action === 'connect') {
-        logger.info(`Connecting to ${platform} as ${username}...`);
+      if (action === 'connect' && username) {
         currentConfig.platforms[platform] = username;
         saveConfig(currentConfig);
         
-        // Start the connector
         let connector;
-        if (platform === 'twitch' && username) connector = new TwitchConnector({ platform: 'twitch', channelId: username });
-        if (platform === 'youtube' && username) connector = new YouTubeConnector({ platform: 'youtube', channelId: username });
-        if (platform === 'kick' && username) connector = new KickConnector({ platform: 'kick', channelId: username });
-        if (platform === 'tiktok' && username) connector = new TikTokConnector({ platform: 'tiktok', channelId: username });
+        if (platform === 'twitch') connector = new TwitchConnector({ platform: 'twitch', channelId: username });
+        if (platform === 'youtube') connector = new YouTubeConnector({ platform: 'youtube', channelId: username });
+        if (platform === 'kick') connector = new KickConnector({ platform: 'kick', channelId: username });
+        if (platform === 'tiktok') connector = new TikTokConnector({ platform: 'tiktok', channelId: username });
         
-        if (connector && username) {
-           pipeline.addConnector(connector);
-           platformStatus[platform as Platform] = { platform: platform as Platform, status: 'CONNECTING', reconnectCount: 0, channelId: username };
-           connector.start().then(() => {
-             const ps = platformStatus[platform as Platform];
-             if (ps) { ps.status = 'CONNECTED'; ps.lastConnectedAt = new Date().toISOString(); }
-           }).catch((err: any) => {
-             const ps = platformStatus[platform as Platform];
-             if (ps) { ps.status = 'ERROR'; ps.lastError = err.message; }
-           });
+        if (connector) {
+           supervisor.addConnector(connector, platform, username);
+           await supervisor.startConnector(platform, username);
         }
       } else if (action === 'disconnect') {
-        logger.info(`Disconnecting from ${platform}...`);
+        const chan = currentConfig.platforms[platform] || '';
         currentConfig.platforms[platform] = undefined;
         saveConfig(currentConfig);
-        // Remove from platformStatus to revert UI to 'not connected' state
-        platformStatus[platform as Platform] = undefined;
+        const managed = supervisor.getConnectorByPlatform(platform);
+        if (managed) {
+          supervisor.removeConnector(platform, chan).catch((e: any) => console.error('[DEBUG] Failed to remove connector:', e));
+        }
       }
-    } else if (command.action === 'reconnect_platform') {
-      const platform = command.payload.platform;
-      logger.info(`Manual reconnect requested for ${platform}`);
-      const status = platformStatus[platform];
-      if (status) {
-        status.status = 'RECONNECTING';
-        status.reconnectCount++;
-        // Normally we'd call connector.reconnect() here
-        // Simulating reconnect for now
-        setTimeout(() => {
-          status.status = 'CONNECTED';
-          status.lastError = null;
-          status.lastConnectedAt = new Date().toISOString();
-        }, 2000);
-      }
-    } else if (command.action === 'update_settings') {
-      const { settings } = command.payload;
-      server.broadcast({
-        type: 'settings_update',
-        settings
-      });
-      logger.info('Broadcasted settings_update to all clients.');
     } else if (command.action === 'update_moderation') {
-      const { config } = command.payload;
       const { loadConfig, saveConfig } = require('./config');
-      const newConfig = { ...loadConfig(), ...config };
+      const currentConfig = loadConfig();
+      const newConfig = { ...currentConfig, ...command.payload.config };
       saveConfig(newConfig);
-      pipeline.updateConfig(newConfig);
-      logger.info('Server configuration updated.');
+      
+      // Notify the moderation pipeline
+      if (modPipeline) {
+        modPipeline.updateConfig(newConfig);
+      }
+      
+      // Optionally broadcast status update so UI knows it saved
+      const healths = supervisor.getAllHealth();
+      server.broadcastToAll({
+        type: 'status_update',
+        platforms: healths.map((h: any) => ({
+          platform: h.platform,
+          status: (supervisor.getConnectorByPlatform(h.platform)?.getStatus() || 'IDLE') as any,
+          reconnectCount: 0,
+          channelId: supervisor.getConnectorByPlatform(h.platform)?.getChannelId() || '',
+          lastError: null,
+          health: h
+        })),
+        statistics: [],
+        serverConfig: newConfig
+      });
+    } else if (command.action === 'link_identity') {
+      // Assuming payload has platform, platformUserId, platformUsername, identityId
+      const { platform, platformUserId, platformUsername, identityId } = command.payload;
+      if (identityStore) {
+        identityStore.linkAccount(platform, platformUserId, platformUsername, identityId);
+        // Broadcast new state if needed, or rely on client refetching
+      }
+    } else if (command.action === 'get_identities') {
+      if (identityStore) {
+        const identities = identityStore.listIdentities();
+        const accounts = identityStore.listIdentities().map((id: any) => identityStore.getAccountsForIdentity(id.id)).flat();
+        
+        server.broadcastToAll({
+          type: 'command_response',
+          action: 'identities_list',
+          payload: { identities, accounts }
+        } as any);
+      }
+    } else if (command.action === 'update_reputation_weights') {
+      const { loadConfig, saveConfig } = require('./config');
+      const currentConfig = loadConfig();
+      currentConfig.reputationWeights = command.payload.weights;
+      saveConfig(currentConfig);
+      if (repCalculator) {
+        repCalculator.updateWeights(currentConfig.reputationWeights);
+      }
+    } else if (command.action === 'request_analytics') {
+      if (analyticsEngine) {
+        const sessionId = command.payload?.sessionId || eventBus.getSessionManager().getActiveSession()?.sessionId || (eventBus.getStore().getDatabase().prepare('SELECT sessionId FROM sessions ORDER BY startedAt DESC LIMIT 1').get() as any)?.sessionId;
+        if (sessionId) {
+          const report = analyticsEngine.getReport(sessionId);
+          const summary = analyticsEngine.getSessionSummary(sessionId);
+          server.broadcastToAll({
+            type: 'command_response',
+            action: 'analytics_report',
+            payload: { sessionId, report, summary }
+          } as any);
+        }
+      }
+    } else if (command.action === 'export_session') {
+      if (sessionExporter) {
+        const sessionId = command.payload?.sessionId || eventBus.getSessionManager().getActiveSession()?.sessionId || (eventBus.getStore().getDatabase().prepare('SELECT sessionId FROM sessions ORDER BY startedAt DESC LIMIT 1').get() as any)?.sessionId;
+        if (sessionId) {
+          const format = command.payload.format;
+          const fs = require('fs');
+          const path = require('path');
+          let filePath = command.payload.destinationPath;
+          if (!filePath) {
+            const exportDir = path.resolve(process.cwd(), 'exports');
+            if (!fs.existsSync(exportDir)) {
+              fs.mkdirSync(exportDir, { recursive: true });
+            }
+            if (format === 'csv') {
+              filePath = path.join(exportDir, `session-${sessionId}.csv`);
+            } else if (format === 'timestamped_log') {
+              filePath = path.join(exportDir, `session-${sessionId}.log`);
+            } else if (format === 'json') {
+              filePath = path.join(exportDir, `session-${sessionId}.json`);
+            }
+          }
+          
+          if (format === 'csv') {
+            filePath = sessionExporter.exportToCSV(sessionId, filePath);
+          } else if (format === 'timestamped_log') {
+            filePath = sessionExporter.exportToTimestampedLog(sessionId, filePath);
+          } else if (format === 'json') {
+            filePath = sessionExporter.exportToVODFormat(sessionId, filePath);
+          }
+          
+          server.broadcastToAll({
+            type: 'command_response',
+            action: 'export_complete',
+            payload: { sessionId, format, filePath }
+          } as any);
+        }
+      }
+    } else if (command.action === 'fetch_session_replay') {
+      if (sessionExporter) {
+        const sessionId = command.payload?.sessionId || eventBus.getSessionManager().getActiveSession()?.sessionId || (eventBus.getStore().getDatabase().prepare('SELECT sessionId FROM sessions ORDER BY startedAt DESC LIMIT 1').get() as any)?.sessionId;
+        if (sessionId) {
+          const path = require('path');
+          const tempPath = path.resolve(process.cwd(), 'exports', `replay-${sessionId}.json`);
+          sessionExporter.exportToVODFormat(sessionId, tempPath);
+          const events = require(tempPath);
+          server.broadcastToAll({
+            type: 'command_response',
+            action: 'session_replay_data',
+            payload: { sessionId, events }
+          } as any);
+        }
+      }
+    } else if (command.action === 'get_marketplace') {
+      const catalog = await marketplace.fetchAvailablePlugins();
+      server.broadcastToAll({
+        type: 'command_response',
+        action: 'marketplace_catalog',
+        payload: { catalog }
+      } as any);
+    } else if (command.action === 'list_plugins') {
+      const plugins = pluginManager.getPlugins();
+      server.broadcastToAll({
+        type: 'command_response',
+        action: 'plugins_list',
+        payload: { plugins }
+      } as any);
+    } else if (command.action === 'grant_plugin_capabilities') {
+      const currentConfig = loadConfig();
+      if (!currentConfig.pluginPermissions) currentConfig.pluginPermissions = {};
+      currentConfig.pluginPermissions[command.payload.pluginId] = command.payload.capabilities;
+      const { saveConfig } = require('./config');
+      saveConfig(currentConfig);
+      pluginManager.setApprovedPermissions(currentConfig.pluginPermissions);
+      // Reload the plugin so it initializes with new permissions
+      await pluginManager.loadPlugin(command.payload.pluginId);
+      
+      const plugins = pluginManager.getPlugins();
+      server.broadcastToAll({
+        type: 'command_response',
+        action: 'plugins_list',
+        payload: { plugins }
+      } as any);
+    } else if (command.action === 'delete_marker') {
+      const db = eventBus.getStore().getDatabase();
+      db.prepare('DELETE FROM stream_markers WHERE markerId = ?').run(command.payload.markerId);
+    } else if (command.action === 'simulate_test_message') {
+      const testEvent = {
+        eventId: crypto.randomUUID(),
+        type: 'chat',
+        platform: 'twitch',
+        timestamp: new Date().toISOString(),
+        author: {
+          id: 'test-user',
+          name: 'TestStreamer',
+          color: '#ff4d4f',
+          badges: []
+        },
+        message: {
+          text: 'This is a test message from Quick Actions! 👋',
+          fragments: [
+            { type: 'text', text: 'This is a test message from Quick Actions! 👋' }
+          ]
+        },
+        moderationStatus: 'visible',
+        toxicityScore: 0
+      };
+      eventBus.publish(testEvent as any);
+    } else if (command.action === 'reset_stats') {
+      const session = eventBus.getSessionManager().getActiveSession();
+      if (session) {
+        const db = eventBus.getStore().getDatabase();
+        db.prepare('DELETE FROM events WHERE sessionId = ?').run(session.sessionId);
+        // Reset in-memory session stats
+        session.totalEvents = 0;
+        session.lastSequenceNumber = 0;
+        session.startedAt = new Date().toISOString();
+        // Update DB
+        db.prepare('UPDATE sessions SET totalEvents = 0, lastSequenceNumber = 0, startedAt = ? WHERE sessionId = ?').run(session.startedAt, session.sessionId);
+      }
+    } else if (command.action === 'delete_session') {
+      const sessionId = command.payload.sessionId;
+      const db = eventBus.getStore().getDatabase();
+      db.prepare('DELETE FROM events WHERE sessionId = ?').run(sessionId);
+      db.prepare('DELETE FROM stream_markers WHERE sessionId = ?').run(sessionId);
+      db.prepare('DELETE FROM sessions WHERE sessionId = ?').run(sessionId);
+      // If we just deleted the active session, clear it and create a new one
+      const activeSession = eventBus.getSessionManager().getActiveSession();
+      if (activeSession && activeSession.sessionId === sessionId) {
+        (eventBus.getSessionManager() as any).clearSession();
+        eventBus.getSessionManager().startSession();
+      }
+    } else if (command.action === 'get_sessions') {
+      const db = eventBus.getStore().getDatabase();
+      const sessions = db.prepare('SELECT * FROM sessions ORDER BY startedAt DESC').all() as any[];
+      server.broadcastToAll({
+        type: 'command_response',
+        action: 'sessions_list',
+        payload: { sessions: sessions.map(s => ({ ...s, platforms: JSON.parse(s.platforms) })) }
+      } as any);
+    } else if (command.action === 'manage_plugin') {
+      const { pluginId, operation } = command.payload;
+      if (operation === 'install') {
+        const catalog = await marketplace.fetchAvailablePlugins();
+        const plugin = catalog.find(p => p.id === pluginId);
+        if (plugin) {
+          // Mock download
+          const fs = require('fs');
+          const path = require('path');
+          const pluginsDir = path.resolve(process.cwd(), 'plugins', pluginId);
+          if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
+          fs.writeFileSync(path.join(pluginsDir, 'manifest.json'), JSON.stringify(plugin, null, 2));
+          let code = '';
+          if (pluginId === 'auto-welcomer') {
+            code = `
+              const seenUsers = new Set();
+              function generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+                });
+              }
+              StreamChats.subscribe((event) => {
+                if (event.type === 'chat') {
+                  const userId = event.author?.id || event.author?.name;
+                  if (userId && !seenUsers.has(userId)) {
+                    seenUsers.add(userId);
+                    // Generate a welcome message event
+                    const welcomeEvent = {
+                      eventId: generateUUID(),
+                      type: 'chat',
+                      platform: event.platform,
+                      timestamp: new Date().toISOString(),
+                      author: {
+                        id: 'system-welcomer',
+                        name: 'AutoWelcomer',
+                        color: '#ffaa00',
+                        badges: []
+                      },
+                      message: {
+                        text: 'Welcome to the stream, @' + (event.author?.name || 'user') + '!',
+                        fragments: [{ type: 'text', text: 'Welcome to the stream, @' + (event.author?.name || 'user') + '!' }]
+                      },
+                      moderationStatus: 'visible',
+                      toxicityScore: 0
+                    };
+                    StreamChats.publish(welcomeEvent);
+                  }
+                }
+              });
+            `;
+          } else {
+            code = `
+              StreamChats.subscribe((event) => {
+                console.log('Plugin ' + '${pluginId}' + ' received event:', event.type);
+              });
+            `;
+          }
+          fs.writeFileSync(path.join(pluginsDir, plugin.entryPoint), code);
+          await pluginManager.loadPlugin(pluginId);
+        }
+      } else if (operation === 'uninstall') {
+        pluginManager.uninstallPlugin(pluginId);
+        const fs = require('fs');
+        const path = require('path');
+        const pluginsDir = path.resolve(process.cwd(), 'plugins', pluginId);
+        if (fs.existsSync(pluginsDir)) {
+          fs.rmSync(pluginsDir, { recursive: true, force: true });
+        }
+      } else if (operation === 'disable') {
+        pluginManager.disablePlugin(pluginId);
+      } else if (operation === 'enable') {
+        await pluginManager.loadPlugin(pluginId);
+      }
+      
+      const plugins = pluginManager.getPlugins();
+      server.broadcastToAll({
+        type: 'command_response',
+        action: 'plugins_list',
+        payload: { plugins }
+      } as any);
     }
   });
 
-  // 2. Initialize Moderation Pipeline
-  const pipeline = new ModerationPipeline({
-    ...serverConfig,
-    maxMessageHistory: 1000
-  });
+  // Initialize Identity and Reputation
+  const { IdentityStore, ReputationCalculator } = require('@obs-chat/identity');
+  const identityStore = new IdentityStore(eventBus.getStore().getDatabase());
+  const repCalculator = new ReputationCalculator(serverConfig.reputationWeights || {});
 
-  const streamStats: Record<Platform, { totalMessages: number, chatters: Set<string>, recentTimestamps: number[] }> = {
-    twitch: { totalMessages: 0, chatters: new Set(), recentTimestamps: [] },
-    youtube: { totalMessages: 0, chatters: new Set(), recentTimestamps: [] },
-    kick: { totalMessages: 0, chatters: new Set(), recentTimestamps: [] },
-    tiktok: { totalMessages: 0, chatters: new Set(), recentTimestamps: [] },
-    custom: { totalMessages: 0, chatters: new Set(), recentTimestamps: [] },
-  };
+  // Initialize Analytics
+  const { AnalyticsEngine, SessionExporter } = require('@obs-chat/analytics');
+  const analyticsEngine = new AnalyticsEngine(eventBus.getStore());
+  const sessionExporter = new SessionExporter(eventBus.getStore());
 
-  const platformStatus: Record<Platform, PlatformStatus | undefined> = {
-    twitch: undefined,
-    youtube: undefined,
-    kick: undefined,
-    tiktok: undefined,
-    custom: undefined,
-  };
+  // 2.5 Initialize Moderation Pipeline
+  const { ModerationPipeline } = require('@obs-chat/moderation-pipeline');
+  const modPipeline = new ModerationPipeline(serverConfig);
+  modPipeline.init().catch(console.error);
 
-  // 3. Connect Pipeline to Event Bus
-  pipeline.on('chat_message', (event) => {
-    eventBus.publish({
-      ...event,
-      type: 'chat',
-    } as StreamEvent).catch((err: Error) => {
-      logger.error('Failed to publish chat event to Event Bus:', err.message);
-    });
-  });
-  
-  pipeline.on('moderation_action', (event) => {
-    server.broadcast(event);
-  });
-
-  pipeline.on('connector_error', ({ connector, error }) => {
-    logger.error(`Connector Error (${connector.options.platform}):`, error.message);
-    const status = platformStatus[connector.options.platform as Platform];
-    if (status) {
-      status.status = 'ERROR';
-      status.lastError = error.message;
+  // 3. Connect Connectors -> Moderation -> Event Bus
+  supervisor.on('stream_event', (event: StreamEvent) => {
+    console.log('[DEBUG] Supervisor received stream_event:', event.type);
+    // Phase 5: Pass chat and superchat through Moderation Pipeline
+    if (event.type === 'chat' || event.type === 'superchat') {
+      console.log('[DEBUG] Passing event to ModPipeline');
+      modPipeline.handleStreamEventAsync(event).catch((e: any) => console.error('[DEBUG] ModPipeline Error:', e));
+    } else {
+      console.log('[DEBUG] Publishing non-chat event directly');
+      eventBus.publish(event);
     }
+  });
+
+  // Moderated events are emitted back out to be published
+  modPipeline.on('stream_event', (event: StreamEvent) => {
+    console.log('[DEBUG] ModPipeline emitted stream_event:', event.type);
+    const result = eventBus.publish(event);
+    console.log('[DEBUG] EventBus publish result:', result ? 'Success' : 'Failed');
+  });
+
+  // T024: Consumer subscription
+  eventBus.subscribe('ws-broadcaster', (persistedEvent: any) => {
+    server.broadcastStreamEvent(persistedEvent);
   });
 
   // 4. Initialize Connectors based on CLI args
-  const promises: Promise<void>[] = [];
-
-  if (twitchChannel) {
-    logger.info(`Initializing Twitch Connector for channel: ${twitchChannel}`);
-    platformStatus.twitch = { platform: 'twitch', status: 'CONNECTING', reconnectCount: 0, channelId: twitchChannel };
-    const twitchConnector = new TwitchConnector({
-      platform: 'twitch',
-      channelId: twitchChannel
-    });
-    pipeline.addConnector(twitchConnector);
-    promises.push(twitchConnector.start().then(() => {
-      if (platformStatus.twitch) {
-        platformStatus.twitch.status = 'CONNECTED';
-        platformStatus.twitch.lastConnectedAt = new Date().toISOString();
-      }
-    }).catch((err: any) => {
-      logger.error('Failed to start Twitch connector:', err.message);
-      if (platformStatus.twitch) {
-        platformStatus.twitch.status = 'ERROR';
-        platformStatus.twitch.lastError = err.message;
-      }
-    }));
+  if (twitchChannel || serverConfig.platforms?.twitch) {
+    const channel = twitchChannel || serverConfig.platforms?.twitch!;
+    supervisor.addConnector(new TwitchConnector({ platform: 'twitch', channelId: channel }), 'twitch', channel);
   }
-
-  // Handle saved configuration if not provided via CLI
-  if (!twitchChannel && serverConfig.platforms?.twitch) {
-     const savedTwitch = serverConfig.platforms.twitch;
-     logger.info(`Initializing Twitch Connector from saved config: ${savedTwitch}`);
-     platformStatus.twitch = { platform: 'twitch', status: 'CONNECTING', reconnectCount: 0, channelId: savedTwitch };
-     const twitchConnector = new TwitchConnector({ platform: 'twitch', channelId: savedTwitch });
-     pipeline.addConnector(twitchConnector);
-     promises.push(twitchConnector.start().then(() => {
-       if (platformStatus.twitch) { platformStatus.twitch.status = 'CONNECTED'; platformStatus.twitch.lastConnectedAt = new Date().toISOString(); }
-     }).catch((err: any) => {
-       if (platformStatus.twitch) { platformStatus.twitch.status = 'ERROR'; platformStatus.twitch.lastError = err.message; }
-     }));
+  if (youtubeChannel || serverConfig.platforms?.youtube) {
+    const channel = youtubeChannel || serverConfig.platforms?.youtube!;
+    supervisor.addConnector(new YouTubeConnector({ platform: 'youtube', channelId: channel }), 'youtube', channel);
   }
-
-  if (youtubeChannel) {
-    logger.info(`Initializing YouTube Connector for channel: ${youtubeChannel}`);
-    platformStatus.youtube = { platform: 'youtube', status: 'CONNECTING', reconnectCount: 0, channelId: youtubeChannel };
-    const ytConnector = new YouTubeConnector({
-      platform: 'youtube',
-      channelId: youtubeChannel
-    });
-    pipeline.addConnector(ytConnector);
-    promises.push(ytConnector.start().then(() => {
-      if (platformStatus.youtube) {
-        platformStatus.youtube.status = 'CONNECTED';
-        platformStatus.youtube.lastConnectedAt = new Date().toISOString();
-      }
-    }).catch((err: any) => {
-      logger.error('Failed to start YouTube connector:', err.message);
-      if (platformStatus.youtube) {
-        platformStatus.youtube.status = 'ERROR';
-        platformStatus.youtube.lastError = err.message;
-      }
-    }));
+  if (kickChannel || serverConfig.platforms?.kick) {
+    const channel = kickChannel || serverConfig.platforms?.kick!;
+    supervisor.addConnector(new KickConnector({ platform: 'kick', channelId: channel }), 'kick', channel);
   }
-
-  if (kickChannel) {
-    logger.info(`Initializing Kick Connector for channel: ${kickChannel}`);
-    const kickConnector = new KickConnector({
-      platform: 'kick',
-      channelId: kickChannel
-    });
-    pipeline.addConnector(kickConnector);
-    promises.push(kickConnector.start().catch((err: any) => {
-      logger.error('Failed to start Kick connector:', err.message);
-    }));
-  }
-
-  if (tiktokChannel) {
-    logger.info(`Initializing TikTok Connector for channel: ${tiktokChannel}`);
-    const tiktokConnector = new TikTokConnector({
-      platform: 'tiktok',
-      channelId: tiktokChannel
-    });
-    pipeline.addConnector(tiktokConnector);
-    promises.push(tiktokConnector.start().catch((err: any) => {
-      logger.error('Failed to start TikTok connector:', err.message);
-    }));
+  if (tiktokChannel || serverConfig.platforms?.tiktok) {
+    const channel = tiktokChannel || serverConfig.platforms?.tiktok!;
+    supervisor.addConnector(new TikTokConnector({ platform: 'tiktok', channelId: channel }), 'tiktok', channel);
   }
 
   // 5. Start Extractors
-  if (promises.length === 0) {
-    logger.info('WARNING: No platforms configured. Please pass --twitch="<channel>" and/or --youtube="<channel>"');
+  if (supervisor.getTotalCount() === 0) {
+    logger.info('WARNING: No platforms configured. Please configure via UI or CLI.');
   } else {
-    logger.info('Connecting to platforms...');
-    await Promise.all(promises);
+    logger.info('Starting connectors...');
+    await supervisor.startAll();
   }
 
   // Periodic status update broadcast
   setInterval(() => {
-    const now = Date.now();
-    const oneMinAgo = now - 60000;
-    
-    const statistics = (Object.keys(streamStats) as Platform[]).map(platform => {
-      const s = streamStats[platform];
-      // remove old timestamps
-      s.recentTimestamps = s.recentTimestamps.filter(t => t >= oneMinAgo);
-      
+    const healths = supervisor.getAllHealth();
+    const platformStatuses: PlatformStatus[] = healths.map((h: any) => {
+      const conn = supervisor.getConnectorByPlatform(h.platform);
       return {
-        platform,
-        totalMessages: s.totalMessages,
-        uniqueChatters: s.chatters.size,
-        messagesPerMinute: s.recentTimestamps.length
-      };
+        platform: h.platform,
+        status: conn ? conn.getStatus() : 'IDLE',
+        reconnectCount: 0,
+        channelId: conn ? conn.getChannelId() : '',
+        lastError: null,
+        health: h
+      } as PlatformStatus;
     });
+
+    const sessionId = sessionManager.getActiveSession()?.sessionId;
+    let statsArray: any[] = [];
+    if (sessionId && analyticsEngine) {
+      try {
+        const summary = analyticsEngine.getSessionSummary(sessionId);
+        if (summary) {
+          statsArray = Object.keys(summary.messagesByPlatform).map(platform => {
+            const totalMsgs = summary.messagesByPlatform[platform] || 0;
+            return {
+              platform,
+              totalMessages: totalMsgs,
+              uniqueChatters: summary.totalUniqueChatters, // approximate globally
+              messagesPerMinute: summary.durationMinutes > 0 ? Math.round(totalMsgs / summary.durationMinutes) : totalMsgs
+            };
+          });
+        }
+      } catch (e) {}
+    }
 
     const statusEvent: StatusUpdateEvent = {
       type: 'status_update',
-      platforms: Object.values(platformStatus).filter(Boolean) as PlatformStatus[],
-      statistics,
+      platforms: platformStatuses,
+      statistics: statsArray,
       serverConfig: getConfig()
     };
-    server.broadcast(statusEvent);
+    server.broadcastToAll(statusEvent);
   }, 2000);
   
+  // Handle Graceful Shutdown
+  const shutdown = async () => {
+    logger.info('Graceful shutdown initiated...');
+    await supervisor.stopAll();
+    sessionManager.endSession();
+    eventBus.getStore().close();
+    await server.close();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
   logger.info(`Server fully operational. Awaiting OBS connections on ws://localhost:${port}`);
 }
 
 process.on('uncaughtException', (err) => {
   logger.error(`FATAL: Uncaught Exception: ${err.message}`);
-  logger.error(err.stack || '');
   process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error(`FATAL: Unhandled Rejection at: ${promise}, reason: ${reason}`);
 });
 
 bootstrap().catch((err) => {

@@ -11,6 +11,7 @@ import { EventBus } from '@obs-chat/event-bus';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+import crypto from 'crypto';
 
 type CommandHandler = (command: CommandEventV2) => void;
 
@@ -99,7 +100,7 @@ export class ChatServer {
             ws.send(JSON.stringify({
               type: 'handshake_ack',
               protocol_version: clientState.protocolVersion,
-              session_id: this.eventBus.getCurrentSessionId(),
+              session_id: this.eventBus.getSessionManager().getActiveSession()?.sessionId || null,
             }));
             return;
           }
@@ -140,25 +141,49 @@ export class ChatServer {
    */
   private handleV2Command(command: CommandEventV2, client: ClientState): void {
     switch (command.action) {
-      case 'reply_message': {
+      case 'backup_database': {
         if (this.onCommand) {
           this.onCommand(command);
         } else {
-          const replyStatus: ReplyStatusEvent = {
-            type: 'reply_status',
-            platform: command.payload.platform,
-            status: 'read_only',
-            error: 'Outbound messaging not configured',
-          };
-          client.ws.send(JSON.stringify(replyStatus));
+          // Send some status
+        }
+        break;
+      }
+      
+      case 'restore_database': {
+        if (this.onCommand) {
+          this.onCommand(command);
         }
         break;
       }
 
       case 'place_marker': {
-        const markerId = this.eventBus.createMarker(command.payload.label);
-        if (markerId) {
-          console.log(`[ChatServer] Marker placed: ${markerId} (label: ${command.payload.label || 'none'})`);
+        const session = this.eventBus.getSessionManager().getActiveSession();
+        if (session) {
+           this.eventBus.getStore().getDatabase().prepare(
+             'INSERT INTO stream_markers (markerId, sessionId, timestamp, label) VALUES (?, ?, ?, ?)'
+           ).run(command.payload.markerId || crypto.randomUUID(), session.sessionId, new Date().toISOString(), command.payload.label || null);
+           console.log(`[ChatServer] Marker placed for session: ${session.sessionId} (label: ${command.payload.label || 'none'})`);
+        }
+        break;
+      }
+
+      case 'get_markers': {
+        let sessionId = (command.payload as any)?.sessionId;
+        if (!sessionId) {
+          const session = this.eventBus.getSessionManager().getActiveSession();
+          sessionId = session?.sessionId;
+        }
+
+        if (sessionId) {
+           const markers = this.eventBus.getStore().getDatabase().prepare(
+             'SELECT markerId as id, label, timestamp as time FROM stream_markers WHERE sessionId = ? ORDER BY timestamp DESC'
+           ).all(sessionId);
+           client.ws.send(JSON.stringify({
+             type: 'command_response',
+             action: 'markers_list',
+             payload: { markers }
+           }));
         }
         break;
       }
@@ -169,6 +194,51 @@ export class ChatServer {
           type: 'settings_update',
           settings: { activeViewMode: command.payload.mode } as any,
         });
+        break;
+      }
+
+      case 'update_settings': {
+        // Broadcast updated settings to all clients so they reflect immediately
+        this.broadcastToAll({
+          type: 'settings_update',
+          settings: command.payload.settings,
+        });
+        // Delegate to onCommand if needed
+        if (this.onCommand) {
+          this.onCommand(command);
+        }
+        break;
+      }
+
+      case 'clear_chat': {
+        // Broadcast clear_chat as a moderation event so UI clients clear their state
+        this.broadcastToAll({
+          type: 'moderation',
+          action: 'clear_chat',
+          eventId: crypto.randomUUID(),
+          platform: 'custom',
+          timestamp: new Date().toISOString()
+        });
+        // Delegate to onCommand if backend also wants to do something
+        if (this.onCommand) {
+          this.onCommand(command);
+        }
+        break;
+      }
+
+      case 'timeout':
+      case 'ban': {
+        this.broadcastToAll({
+          type: 'moderation',
+          action: command.action as 'timeout' | 'ban',
+          eventId: crypto.randomUUID(),
+          platform: command.payload.platform || 'custom',
+          targetUserId: command.payload.userId,
+          timestamp: new Date().toISOString()
+        });
+        if (this.onCommand) {
+          this.onCommand(command);
+        }
         break;
       }
 
@@ -219,33 +289,16 @@ export class ChatServer {
     for (const client of this.clients) {
       if (client.ws.readyState !== WebSocket.OPEN) continue;
 
-      if (client.protocolVersion >= 2) {
-        // v2: Send stream_event wrapper
-        const wsEvent: StreamEventWs = {
-          type: 'stream_event',
-          event: event as any,
-        };
-        client.ws.send(JSON.stringify(wsEvent));
-      } else {
-        // v1: Only send chat_message events (backward compatible)
-        if (event.type === 'chat') {
-          client.ws.send(JSON.stringify(event));
-        }
-      }
+      // v2: Send stream_event wrapper
+      const wsEvent: StreamEventWs = {
+        type: 'stream_event',
+        event: event as any,
+      };
+      client.ws.send(JSON.stringify(wsEvent));
     }
   }
 
-  /**
-   * Legacy broadcast for non-stream events (settings, status, moderation).
-   */
-  public broadcast(event: ChatEvent | ModerationEvent | SettingsUpdateEvent | StatusUpdateEvent | ReplyStatusEvent | PluginStatusEvent): void {
-    const data = JSON.stringify(event);
-    for (const client of this.clients) {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(data);
-      }
-    }
-  }
+
 
   /**
    * Broadcast to all clients regardless of protocol version.

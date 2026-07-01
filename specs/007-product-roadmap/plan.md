@@ -1,12 +1,12 @@
 # Implementation Plan: StreamChats Product Roadmap
 
-**Branch**: `007-product-roadmap` | **Date**: 2026-06-27 | **Spec**: [spec.md](file:///c:/Users/basha/Desktop/root/StreamChats/StreamChats/specs/007-product-roadmap/spec.md)
+**Branch**: `007-product-roadmap` | **Date**: 2026-06-30 | **Spec**: [spec.md](file:///c:/Users/basha/Desktop/root/StreamChats/StreamChats/specs/007-product-roadmap/spec.md)
 
 **Input**: Feature specification from `specs/007-product-roadmap/spec.md`
 
 ## Summary
 
-Transform StreamChats from a real-time chat overlay into a full-featured streaming platform by implementing: an Event Bus architecture with durable SQLite storage, a Connector Supervisor with circuit breakers, an expanded event schema (gifts/follows/raids/super chats), an enhanced broadcaster dashboard with reply-to-platform and view modes, cross-platform identity linking with reputation scoring, shadow suppression and AI-powered local moderation, zero-cloud analytics with CSV export, a sandboxed plugin SDK with developer CLI, obs-websocket deep integration, and a Tauri-based native desktop wrapper. All features maintain the local-first principle with no cloud dependencies for core functionality.
+Transform StreamChats from a real-time chat overlay into a full-featured streaming platform by implementing: an Event Bus architecture with durable SQLite storage, a Connector Supervisor with circuit breakers, an expanded event schema (gifts/follows/raids/super chats), an enhanced broadcaster dashboard with view modes, cross-platform identity linking with reputation scoring, shadow suppression and AI-powered local moderation, zero-cloud analytics with CSV export, a sandboxed plugin SDK with developer CLI, obs-websocket deep integration, and a Tauri-based native desktop wrapper. All features maintain the local-first principle with no cloud dependencies for core functionality. Note: Outbound reply-to-platform messaging is deferred, and all platforms are read-only.
 
 ## Technical Context
 
@@ -16,19 +16,19 @@ Transform StreamChats from a real-time chat overlay into a full-featured streami
 - Existing: React 18, Vite 5, react-router-dom, ws, pino, zod
 - New: `better-sqlite3` (durable storage), `isolated-vm` (plugin sandbox), `obs-websocket-js` (OBS integration), `onnxruntime-node` + `@xenova/transformers` (local AI moderation), `@tauri-apps/api` (desktop wrapper), `pkg` (Node.js binary packaging)
 
-**Storage**: SQLite via `better-sqlite3` with WAL mode (event log, sessions, identities, analytics), browser localStorage (display preferences), server-side JSON (moderation config)
+**Storage**: SQLite via `better-sqlite3` with WAL mode (event log, sessions, identities, analytics), browser localStorage (display preferences), server-side JSON (moderation config). Manual export/import is provided for backup.
 
-**Testing**: Manual verification via browser + OBS Browser Source, unit tests for Event Bus and moderation pipeline, integration tests for connector supervisor
+**Testing**: Manual verification via browser + OBS Browser Source, unit tests for Event Bus and moderation pipeline, integration tests for connector supervisor.
 
-**Target Platform**: Desktop browser (localhost), OBS Studio Browser Source, native desktop app (Tauri)
+**Target Platform**: Desktop browser (localhost), OBS Studio Browser Source, native desktop app (Tauri).
 
-**Project Type**: Monorepo web application (npm workspaces) + native desktop wrapper
+**Project Type**: Monorepo web application (npm workspaces) + native desktop wrapper.
 
-**Performance Goals**: Dashboard loads <2s, setting changes reflected in OBS <1s, moderation pipeline <200ms/message, analytics generation <30s for 8-hour sessions, responsive at 500+ msg/min
+**Performance Goals**: Dashboard loads <2s, setting changes reflected in OBS <1s, moderation pipeline <200ms/message, analytics generation <30s for 8-hour sessions, responsive at 500+ msg/min.
 
-**Constraints**: Local-first execution, no external API dependencies for core features, minimal memory footprint for 8+ hour sessions, CPU <3%
+**Constraints**: Local-first execution, no external API dependencies for core features, minimal memory footprint for 8+ hour sessions, CPU <3%. AI model is downloaded on first use, not bundled.
 
-**Scale/Scope**: Single local user, 1–4 platform connectors, 50-message display buffer (overlay), unlimited event log (SQLite)
+**Scale/Scope**: Single local user, 1–4 platform connectors, 50-message display buffer (overlay), unlimited event log (SQLite).
 
 ## Constitution Check
 
@@ -84,7 +84,7 @@ packages/
 ├── moderation-pipeline/src/
 │   ├── index.ts                 # [MODIFY] Add shadow suppression mode, rate limiter
 │   ├── filters/
-│   │   └── toxicity.ts          # [NEW] ONNX-based toxicity scoring
+│   │   └── toxicity.ts          # [NEW] ONNX-based toxicity scoring (download on demand)
 │   └── handlers/
 │       ├── rate-limiter.ts      # [NEW] Raid detection + auto-collapse
 │       └── shadow-suppress.ts   # [NEW] Local-only message hiding
@@ -121,27 +121,27 @@ packages/
 apps/
 ├── local-server/src/
 │   ├── index.ts                 # [MODIFY] Replace EventEmitter with Event Bus, add session mgmt
-│   ├── server.ts                # [MODIFY] Add WS protocol v2 commands (reply, marker, identity, etc.)
+│   ├── server.ts                # [MODIFY] Add WS protocol v2 commands (marker, identity, backup, etc.)
 │   ├── config.ts                # [MODIFY] Add identity config, analytics config, plugin config
 │   └── utils/
 │       └── logger.ts            # Existing (no changes)
 │
 ├── overlay-ui/src/
-│   ├── main.tsx                 # Existing (no changes — routing already added)
+│   ├── main.tsx                 # Existing (no changes)
 │   ├── App.tsx                  # [MODIFY] Add new routes for analytics, identity, plugins
 │   ├── index.css                # [MODIFY] Add styles for new dashboard panels, view modes
 │   ├── components/
 │   │   ├── ChatFeed.tsx         # [MODIFY] Support view modes, shadow-suppressed styling
-│   │   ├── ChatMessage.tsx      # [MODIFY] Add identity badge, reputation indicator, reply button
+│   │   ├── ChatMessage.tsx      # [MODIFY] Add identity badge, reputation indicator (no reply button)
 │   │   ├── Dashboard.tsx        # [MODIFY] Add sidebar entries for new panels
 │   │   ├── ChatControls.tsx     # [MODIFY] Add view mode switcher
 │   │   ├── AnalyticsPanel.tsx   # [NEW] Post-stream analytics display
 │   │   ├── IdentityPanel.tsx    # [NEW] Viewer identity management
 │   │   ├── PluginManager.tsx    # [NEW] Plugin install/manage UI
 │   │   ├── ThemeEditor.tsx      # [NEW] Visual theme editor with live preview
-│   │   ├── ReplyComposer.tsx    # [NEW] Cross-platform reply input
 │   │   ├── MarkerTimeline.tsx   # [NEW] Stream marker visualization
-│   │   └── SessionReplay.tsx    # [NEW] Chat replay player
+│   │   ├── SessionReplay.tsx    # [NEW] Chat replay player
+│   │   └── SettingsPanel.tsx    # [MODIFY] Add manual DB backup/restore buttons
 │   └── hooks/
 │       ├── useChatFeed.ts       # [MODIFY] Handle stream_event (v2), view mode filtering
 │       ├── useSettings.ts       # Existing (no changes)
@@ -182,9 +182,8 @@ tools/
             └── plugin/          # Plugin boilerplate template
 ```
 
-**Structure Decision**: The existing monorepo structure is preserved and extended. Six new packages are added under `packages/` (event-bus, identity, analytics, plugin-sdk, obs-integration) following the existing convention. A new `tools/` workspace is added for the CLI. The Tauri desktop wrapper is a new app under `apps/desktop/`. All new packages are registered in the root `package.json` workspaces array.
+**Structure Decision**: The existing monorepo structure is preserved and extended. Six new packages are added under `packages/` (event-bus, identity, analytics, plugin-sdk, obs-integration) following the existing convention. A new `tools/` workspace is added for the CLI. The Tauri desktop wrapper is a new app under `apps/desktop/`. All new packages are registered in the root `package.json` workspaces array. The `ReplyComposer.tsx` component is no longer needed since the reply-to-platform feature is deferred.
 
 ## Complexity Tracking
 
 No constitution violations to justify.
-
