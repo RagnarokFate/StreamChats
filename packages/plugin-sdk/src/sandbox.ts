@@ -46,14 +46,35 @@ export class PluginSandbox {
         subscribe: (callback: (event: any) => void) => {
           if (this.manifest.permissions.includes('read_chat')) {
             // Note: We use the generic 'all' filter, or we can expose fine-grained filters later
-            this.eventBus.on('event', (evt) => callback(evt));
+            this.eventBus.subscribe('plugin-' + this.manifest.id, (evt) => callback(evt));
           } else {
             console.error(`[Plugin:${this.manifest.id}] Permission denied to read chat`);
           }
         }
       },
       require: () => { throw new Error('Security Error: Filesystem/Network modules are not allowed in this sandbox context.'); },
-      fetch: () => { throw new Error('Security Error: Network access is not allowed in this sandbox context.'); },
+      fetch: async (url: string, options?: any) => {
+        if (this.manifest.permissions.includes('network')) {
+          const fetchObj = require('node-fetch') || fetch;
+          return fetchObj(url, options);
+        }
+        throw new Error('Security Error: Network access is not allowed. Request "network" capability.');
+      },
+      fs: {
+        readFile: (filepath: string, encoding: string, callback: any) => {
+          if (this.manifest.permissions.includes('filesystem')) {
+            require('fs').readFile(filepath, encoding, callback);
+          } else {
+            throw new Error('Security Error: Filesystem access is not allowed. Request "filesystem" capability.');
+          }
+        },
+        readFileSync: (filepath: string, encoding: any) => {
+          if (this.manifest.permissions.includes('filesystem')) {
+            return require('fs').readFileSync(filepath, encoding);
+          }
+          throw new Error('Security Error: Filesystem access is not allowed. Request "filesystem" capability.');
+        }
+      },
       XMLHttpRequest: undefined,
       WebSocket: undefined
     };
@@ -86,7 +107,7 @@ export class PluginSandbox {
       },
       subscribe: (callbackRef: any) => {
         if (this.manifest.permissions.includes('read_chat')) {
-          this.eventBus.on('event', (evt) => {
+          this.eventBus.subscribe('plugin-' + this.manifest.id, (evt) => {
             try {
               callbackRef.applyIgnored(undefined, [new ivm.ExternalCopy(evt).copyInto()]);
             } catch (e) {
@@ -104,6 +125,26 @@ export class PluginSandbox {
     await global.set('fetch', new ivm.Reference(() => { throw new Error('Security Error: fetch() is forbidden'); }));
     await global.set('XMLHttpRequest', undefined);
     await global.set('WebSocket', undefined);
+
+    // Inject capability-based fetch and fs
+    await global.set('fetch', new ivm.Reference(async (url: string, options?: any) => {
+      if (this.manifest.permissions.includes('network')) {
+        const fetchObj = require('node-fetch') || fetch;
+        const res = await fetchObj(url, options);
+        const text = await res.text();
+        return new ivm.ExternalCopy(text).copyInto(); // basic text response for isolation
+      }
+      throw new Error('Security Error: Network access is not allowed. Request "network" capability.');
+    }));
+
+    await global.set('fs', new ivm.Reference({
+      readFileSync: (filepath: string, encoding: any) => {
+        if (this.manifest.permissions.includes('filesystem')) {
+          return require('fs').readFileSync(filepath, encoding);
+        }
+        throw new Error('Security Error: Filesystem access is not allowed. Request "filesystem" capability.');
+      }
+    }));
 
     const script = await isolate.compileScript(this.scriptCode, { filename: `${this.manifest.id}.js` });
     await script.run(context, { timeout: 1000 });

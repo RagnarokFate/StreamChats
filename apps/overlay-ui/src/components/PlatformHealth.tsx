@@ -77,11 +77,19 @@ export function PlatformHealth({ statusUpdate, sendCommand }: PlatformHealthProp
                   <>
                     <div style={{ fontSize: '0.85rem', color: '#aaa' }}>
                       Status: <strong style={{ color: getStatusColor(connectedState.status) }}>{connectedState.status}</strong>
+                      {connectedState.channelId && <span style={{ marginLeft: '8px', color: '#fff' }}>• Username: <strong style={{color: '#4fc3f7'}}>{connectedState.channelId}</strong></span>}
                       {connectedState.lastConnectedAt && ` • Last Connected: ${new Date(connectedState.lastConnectedAt).toLocaleTimeString()}`}
                     </div>
                     {connectedState.lastError && (
                       <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#ff4d4f', background: 'rgba(255,0,0,0.1)', padding: '8px', borderRadius: '4px' }}>
                         Error: {connectedState.lastError}
+                      </div>
+                    )}
+                    {connectedState.health && (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#888' }}>
+                        <span>⚡ Latency: {connectedState.health.latencyMs}ms</span>
+                        <span>⚠️ Error Rate: {(connectedState.health.errorRate * 100).toFixed(1)}%</span>
+                        {connectedState.health.lastEventTime && <span>🕒 Last Event: {new Date(connectedState.health.lastEventTime).toLocaleTimeString()}</span>}
                       </div>
                     )}
                   </>

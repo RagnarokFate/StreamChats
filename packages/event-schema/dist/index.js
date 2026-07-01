@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConnectorHealthSchema = exports.StreamMarkerSchema = exports.StreamSessionSchema = exports.SessionStatusSchema = exports.IdentityUpdateEventSchema = exports.PluginStatusEventSchema = exports.ExportReadyEventSchema = exports.AnalyticsReportEventSchema = exports.ReplyStatusEventSchema = exports.StreamEventWsSchema = exports.CommandEventV2Schema = exports.ManagePluginCommandSchema = exports.RequestAnalyticsCommandSchema = exports.ExportSessionCommandSchema = exports.UpdateReputationWeightsCommandSchema = exports.LinkIdentityCommandSchema = exports.ViewModeSchema = exports.SwitchViewModeCommandSchema = exports.PlaceMarkerCommandSchema = exports.ReplyMessageCommandSchema = exports.PersistedEventSchema = exports.StreamEventSchema = exports.ExtendedModerationEventSchema = exports.ExtendedChatEventSchema = exports.SuperChatEventSchema = exports.RaidEventSchema = exports.FollowEventSchema = exports.GiftEventSchema = exports.StreamEventBaseSchema = exports.ModerationStatusSchema = exports.StreamEventTypeSchema = exports.CommandEventSchema = exports.StatusUpdateEventSchema = exports.SettingsUpdateEventSchema = exports.StreamStatisticsSchema = exports.PlatformStatusSchema = exports.ConnectorStatusSchema = exports.ServerConfigSchema = exports.DashboardSettingsSchema = exports.ModerationEventSchema = exports.ChatEventSchema = exports.BaseEventSchema = exports.ChatMessageSchema = exports.ChatAuthorSchema = exports.MessageFragmentSchema = exports.TextFragmentSchema = exports.EmoteFragmentSchema = exports.PlatformSchema = void 0;
+exports.IdentityUpdateEventSchema = exports.PluginStatusEventSchema = exports.ExportReadyEventSchema = exports.AnalyticsReportEventSchema = exports.ReplyStatusEventSchema = exports.StreamEventWsSchema = exports.CommandEventV2Schema = exports.GetSessionsCommandSchema = exports.DeleteSessionCommandSchema = exports.DeleteMarkerCommandSchema = exports.GrantPluginCapabilitiesCommandSchema = exports.ListPluginsCommandSchema = exports.GetMarketplaceCommandSchema = exports.ManagePluginCommandSchema = exports.RequestAnalyticsCommandSchema = exports.ExportSessionCommandSchema = exports.UpdateReputationWeightsCommandSchema = exports.LinkIdentityCommandSchema = exports.ViewModeSchema = exports.SwitchViewModeCommandSchema = exports.PlaceMarkerCommandSchema = exports.ReplyMessageCommandSchema = exports.PersistedEventSchema = exports.StreamEventSchema = exports.ExtendedModerationEventSchema = exports.ExtendedChatEventSchema = exports.SuperChatEventSchema = exports.RaidEventSchema = exports.FollowEventSchema = exports.GiftEventSchema = exports.StreamEventBaseSchema = exports.ModerationStatusSchema = exports.StreamEventTypeSchema = exports.CommandEventSchema = exports.StatusUpdateEventSchema = exports.SettingsUpdateEventSchema = exports.StreamStatisticsSchema = exports.PlatformStatusSchema = exports.ConnectorStatusSchema = exports.ServerConfigSchema = exports.DashboardSettingsSchema = exports.ModerationEventSchema = exports.ChatEventSchema = exports.BaseEventSchema = exports.ChatMessageSchema = exports.ChatAuthorSchema = exports.MessageFragmentSchema = exports.TextFragmentSchema = exports.EmoteFragmentSchema = exports.PlatformSchema = void 0;
+exports.ConnectorHealthSchema = exports.StreamMarkerSchema = exports.StreamSessionSchema = exports.SessionStatusSchema = void 0;
 const zod_1 = require("zod");
 // Define the supported platforms
 exports.PlatformSchema = zod_1.z.enum(['youtube', 'twitch', 'kick', 'tiktok', 'custom']);
@@ -68,12 +69,22 @@ exports.ServerConfigSchema = zod_1.z.object({
     bannedWordAction: zod_1.z.enum(['mask', 'drop']).default('mask'),
     maskCharacter: zod_1.z.string().default('*'),
     spamProtectionEnabled: zod_1.z.boolean().default(true),
+    aiToxicityEnabled: zod_1.z.boolean().default(false),
+    aiToxicityThreshold: zod_1.z.number().min(0).max(1).default(0.8),
     platforms: zod_1.z.object({
         twitch: zod_1.z.string().optional(),
         youtube: zod_1.z.string().optional(),
         kick: zod_1.z.string().optional(),
         tiktok: zod_1.z.string().optional(),
     }).optional(),
+    reputationWeights: zod_1.z.object({
+        messages: zod_1.z.number().default(0.01),
+        gifts: zod_1.z.number().default(0.5),
+        watchTime: zod_1.z.number().default(0.005),
+        modActions: zod_1.z.number().default(-2.0),
+        spamFlags: zod_1.z.number().default(-1.0),
+    }).optional(),
+    pluginPermissions: zod_1.z.record(zod_1.z.string(), zod_1.z.array(zod_1.z.string())).optional(),
 });
 exports.ConnectorStatusSchema = zod_1.z.enum(['IDLE', 'CONNECTING', 'CONNECTED', 'WAITING', 'RECONNECTING', 'ERROR']);
 exports.PlatformStatusSchema = zod_1.z.object({
@@ -83,6 +94,13 @@ exports.PlatformStatusSchema = zod_1.z.object({
     reconnectCount: zod_1.z.number(),
     lastConnectedAt: zod_1.z.string().nullable().optional(),
     channelId: zod_1.z.string(),
+    health: zod_1.z.object({
+        platform: exports.PlatformSchema,
+        latencyMs: zod_1.z.number(),
+        lastEventTime: zod_1.z.string().datetime().nullable(),
+        errorRate: zod_1.z.number().min(0).max(1),
+        supportsOutbound: zod_1.z.boolean(),
+    }).optional(),
 });
 exports.StreamStatisticsSchema = zod_1.z.object({
     platform: exports.PlatformSchema,
@@ -259,6 +277,7 @@ exports.PlaceMarkerCommandSchema = zod_1.z.object({
     type: zod_1.z.literal('command'),
     action: zod_1.z.literal('place_marker'),
     payload: zod_1.z.object({
+        markerId: zod_1.z.string().optional(),
         label: zod_1.z.string().optional(),
     }),
 });
@@ -300,8 +319,9 @@ exports.ExportSessionCommandSchema = zod_1.z.object({
     action: zod_1.z.literal('export_session'),
     payload: zod_1.z.object({
         sessionId: zod_1.z.string().uuid(),
-        format: zod_1.z.enum(['csv', 'timestamped_log']),
+        format: zod_1.z.enum(['csv', 'timestamped_log', 'json']),
         includeModeration: zod_1.z.boolean().default(true),
+        destinationPath: zod_1.z.string().optional(),
     }),
 });
 exports.RequestAnalyticsCommandSchema = zod_1.z.object({
@@ -321,6 +341,43 @@ exports.ManagePluginCommandSchema = zod_1.z.object({
             'network', 'filesystem-read', 'filesystem-write', 'notifications', 'overlay-render'
         ])).optional(),
     }),
+});
+exports.GetMarketplaceCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('get_marketplace'),
+    payload: zod_1.z.object({}),
+});
+exports.ListPluginsCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('list_plugins'),
+    payload: zod_1.z.object({}),
+});
+exports.GrantPluginCapabilitiesCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('grant_plugin_capabilities'),
+    payload: zod_1.z.object({
+        pluginId: zod_1.z.string(),
+        capabilities: zod_1.z.array(zod_1.z.string()),
+    }),
+});
+exports.DeleteMarkerCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('delete_marker'),
+    payload: zod_1.z.object({
+        markerId: zod_1.z.string(),
+    }),
+});
+exports.DeleteSessionCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('delete_session'),
+    payload: zod_1.z.object({
+        sessionId: zod_1.z.string().uuid(),
+    }),
+});
+exports.GetSessionsCommandSchema = zod_1.z.object({
+    type: zod_1.z.literal('command'),
+    action: zod_1.z.literal('get_sessions'),
+    payload: zod_1.z.object({}),
 });
 // Combined v2 command schema (extends v1 discriminated union)
 exports.CommandEventV2Schema = zod_1.z.discriminatedUnion('action', [
@@ -365,6 +422,32 @@ exports.CommandEventV2Schema = zod_1.z.discriminatedUnion('action', [
     exports.ExportSessionCommandSchema,
     exports.RequestAnalyticsCommandSchema,
     exports.ManagePluginCommandSchema,
+    exports.GetMarketplaceCommandSchema,
+    exports.ListPluginsCommandSchema,
+    exports.GrantPluginCapabilitiesCommandSchema,
+    exports.DeleteMarkerCommandSchema,
+    exports.DeleteSessionCommandSchema,
+    exports.GetSessionsCommandSchema,
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('backup_database'),
+        payload: zod_1.z.object({}),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('restore_database'),
+        payload: zod_1.z.object({}),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('simulate_test_message'),
+        payload: zod_1.z.object({}),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('get_identities'),
+        payload: zod_1.z.object({}),
+    }),
     zod_1.z.object({
         type: zod_1.z.literal('command'),
         action: zod_1.z.literal('manage_platform'),
@@ -382,6 +465,30 @@ exports.CommandEventV2Schema = zod_1.z.discriminatedUnion('action', [
             url: zod_1.z.string().optional(),
             password: zod_1.z.string().optional(),
             sceneName: zod_1.z.string().optional(),
+        }),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('get_markers'),
+        payload: zod_1.z.object({
+            sessionId: zod_1.z.string().uuid().optional()
+        }),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('timeout'),
+        payload: zod_1.z.object({
+            userId: zod_1.z.string(),
+            duration: zod_1.z.number().optional(),
+            platform: exports.PlatformSchema.optional(),
+        }),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('ban'),
+        payload: zod_1.z.object({
+            userId: zod_1.z.string(),
+            platform: exports.PlatformSchema.optional(),
         }),
     }),
 ]);

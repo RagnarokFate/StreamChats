@@ -1,12 +1,12 @@
-import { EventBusStore } from '@obs-chat/event-bus';
+import { EventStore } from '@obs-chat/event-bus';
 import { StreamEvent } from '@obs-chat/event-schema';
 import fs from 'fs';
 import path from 'path';
 
 export class SessionExporter {
-  private store: EventBusStore;
+  private store: EventStore;
 
-  constructor(store: EventBusStore) {
+  constructor(store: EventStore) {
     this.store = store;
   }
 
@@ -18,7 +18,7 @@ export class SessionExporter {
     
     let csvContent = 'SequenceNumber,Timestamp,Platform,Type,Author,Message\n';
     
-    events.forEach(row => {
+    events.forEach((row: any) => {
       try {
         const payload = JSON.parse(row.payload) as StreamEvent;
         const seq = row.sequence_number;
@@ -55,12 +55,18 @@ export class SessionExporter {
     }
 
     const events = this.store.getEventsBySession(sessionId);
-    const sessionStartTs = new Date(session.started_at).getTime();
+    
+    let baseTs = new Date(session.startedAt).getTime();
+    if (events.length > 0) {
+      try {
+        baseTs = new Date(JSON.parse(events[0].payload).timestamp).getTime();
+      } catch (e) {}
+    }
 
-    const vodEvents = events.map(row => {
+    const vodEvents = events.map((row: any) => {
       const payload = JSON.parse(row.payload) as StreamEvent;
       const eventTs = new Date(payload.timestamp).getTime();
-      const relativeTimeMs = Math.max(0, eventTs - sessionStartTs);
+      const relativeTimeMs = Math.max(0, eventTs - baseTs);
       
       return {
         ...payload,
@@ -71,6 +77,44 @@ export class SessionExporter {
     const fullPath = path.resolve(outputPath);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, JSON.stringify(vodEvents, null, 2), 'utf8');
+    
+    return fullPath;
+  }
+
+  /**
+   * Export the chat session as a timestamped log file.
+   */
+  public exportToTimestampedLog(sessionId: string, outputPath: string): string {
+    const events = this.store.getEventsBySession(sessionId);
+    
+    let logContent = '';
+    
+    events.forEach((row: any) => {
+      try {
+        const payload = JSON.parse(row.payload) as StreamEvent;
+        const ts = new Date(payload.timestamp).toLocaleString();
+        const platform = payload.platform;
+        const type = payload.type;
+        const author = (payload as any).author ? (payload as any).author.name : 'System';
+        
+        let message = '';
+        if ('text' in payload && typeof payload.text === 'string') {
+          message = payload.text;
+        } else if (type === 'gift') {
+          message = `sent ${(payload as any).giftCount} ${(payload as any).giftType}`;
+        } else if (type === 'follow') {
+          message = `followed the channel`;
+        }
+
+        logContent += `[${ts}] [${platform}] ${author}: ${message}\n`;
+      } catch (e) {
+        // Skip invalid rows
+      }
+    });
+
+    const fullPath = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, logContent, 'utf8');
     
     return fullPath;
   }

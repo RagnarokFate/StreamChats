@@ -15,5 +15,8 @@
     "packages/*",
     "connectors/*",
     "tools/*"
-  ]
+  ],
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
 }

@@ -32,7 +32,27 @@ export function ThemeEditor({ sendCommand }: ThemeEditorProps) {
             <option value="glass">Glass (Default)</option>
             <option value="minimal">Minimal</option>
             <option value="neon">Neon</option>
+            <option value="classic">Classic</option>
             <option value="retro">Retro</option>
+            <option value="bubble">Bubble</option>
+            <option value="holographic">Holographic</option>
+            <option value="comic">Comic</option>
+            <option value="terminal">Terminal</option>
+            <option value="high-contrast">High Contrast</option>
+          </select>
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.1rem' }}>View Mode</h3>
+          <select 
+            value={settings.viewMode}
+            onChange={(e) => handleUpdate({ viewMode: e.target.value as any })}
+            style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px' }}
+          >
+            <option value="unified">Unified (Single Column)</option>
+            <option value="split">Split (Multi-Column)</option>
+            <option value="priority">Priority (Highlight Events)</option>
+            <option value="moderator">Moderator (Action Buttons)</option>
           </select>
         </div>
 

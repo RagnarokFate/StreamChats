@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "main": "dist/index.js",
+  "bin": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
+    "compile": "npm run build && pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path ../desktop/src-tauri/bin",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -24,6 +26,7 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.10"
+    "@types/ws": "^8.5.10",
+    "pkg": "^5.8.1"
   }
 }

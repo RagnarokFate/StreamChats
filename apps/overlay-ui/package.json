@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@obs-chat/event-schema": "*",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.18.0"
+    "react-router-dom": "^7.18.0",
+    "recharts": "^3.9.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

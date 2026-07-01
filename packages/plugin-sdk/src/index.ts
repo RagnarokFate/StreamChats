@@ -13,6 +13,7 @@ export class PluginManager {
   private pluginsDir: string;
   private sandboxes: Map<string, PluginSandbox> = new Map();
   private manifests: Map<string, PluginManifest> = new Map();
+  private approvedPermissions: Record<string, string[]> = {};
 
   constructor(eventBus: EventBus, pluginsDir?: string) {
     this.eventBus = eventBus;
@@ -21,6 +22,10 @@ export class PluginManager {
     if (!fs.existsSync(this.pluginsDir)) {
       fs.mkdirSync(this.pluginsDir, { recursive: true });
     }
+  }
+
+  public setApprovedPermissions(perms: Record<string, string[]>) {
+    this.approvedPermissions = perms || {};
   }
 
   /**
@@ -58,12 +63,23 @@ export class PluginManager {
         return false;
       }
 
+      this.manifests.set(manifest.id, manifest);
+
+      const requestedPerms = manifest.permissions || [];
+      const granted = this.approvedPermissions[manifest.id] || [];
+      const isApproved = requestedPerms.every(p => granted.includes(p));
+
+      if (!isApproved) {
+        console.log(`[PluginManager] Plugin ${manifest.id} is loaded but requires permission approval: ${requestedPerms.filter(p => !granted.includes(p)).join(', ')}`);
+        // We load the manifest but do NOT initialize the sandbox.
+        return true;
+      }
+
       const scriptCode = fs.readFileSync(entryPointPath, 'utf-8');
       
       const sandbox = new PluginSandbox(manifest, scriptCode, this.eventBus);
       await sandbox.initialize();
 
-      this.manifests.set(manifest.id, manifest);
       this.sandboxes.set(manifest.id, sandbox);
 
       console.log(`[PluginManager] Loaded plugin: ${manifest.name} v${manifest.version}`);
@@ -77,20 +93,42 @@ export class PluginManager {
   /**
    * Get all loaded plugin manifests.
    */
-  getPlugins(): PluginManifest[] {
-    return Array.from(this.manifests.values());
+  getPlugins(): (PluginManifest & { status: string; missingPermissions?: string[] })[] {
+    return Array.from(this.manifests.values()).map(m => {
+      const requested = m.permissions || [];
+      const granted = this.approvedPermissions[m.id] || [];
+      const missing = requested.filter(p => !granted.includes(p));
+      const isActive = this.sandboxes.has(m.id);
+      
+      return {
+        ...m,
+        status: isActive ? 'active' : (missing.length > 0 ? 'needs_permission' : 'disabled'),
+        missingPermissions: missing
+      };
+    });
   }
 
   /**
-   * Disable a plugin (Note: Full unloading of sandbox memory isn't supported in this basic v1 manager, 
-   * we would need to tear down the isolate and unsubscribe from EventBus).
+   * Disable a plugin by unsubscribing it from the event bus
    */
   disablePlugin(id: string): boolean {
     if (this.sandboxes.has(id)) {
-      // In a full implementation, we'd unsubscribe from eventBus here.
-      // For now, we just remove it from tracking.
+      this.eventBus.unsubscribe('plugin-' + id);
       this.sandboxes.delete(id);
       console.log(`[PluginManager] Disabled plugin: ${id}`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Uninstall a plugin completely by disabling it and removing its manifest.
+   */
+  uninstallPlugin(id: string): boolean {
+    this.disablePlugin(id);
+    if (this.manifests.has(id)) {
+      this.manifests.delete(id);
+      console.log(`[PluginManager] Uninstalled plugin: ${id}`);
       return true;
     }
     return false;

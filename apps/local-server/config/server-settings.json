@@ -7,5 +7,15 @@
   "bannedWordAction": "mask",
   "maskCharacter": "*",
   "spamProtectionEnabled": true,
-  "platforms": {}
+  "aiToxicityEnabled": false,
+  "aiToxicityThreshold": 0.8,
+  "platforms": {
+    "twitch": "nattynattlol"
+  },
+  "pluginPermissions": {
+    "auto-welcomer": [
+      "read_chat",
+      "send_chat"
+    ]
+  }
 }

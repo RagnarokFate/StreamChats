@@ -9,7 +9,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@obs-chat/event-schema": "workspace:*"
+    "@obs-chat/event-schema": "*"
   },
   "devDependencies": {
     "typescript": "^5.2.2"

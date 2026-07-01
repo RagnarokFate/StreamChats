@@ -11,6 +11,8 @@ const DEFAULT_CONFIG: ServerConfig = {
   bannedWordAction: 'mask',
   maskCharacter: '*',
   spamProtectionEnabled: true,
+  aiToxicityEnabled: false,
+  aiToxicityThreshold: 0.8,
 };
 
 let currentConfig: ServerConfig = { ...DEFAULT_CONFIG };

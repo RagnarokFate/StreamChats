@@ -5,7 +5,7 @@ export interface UIMessage {
   eventId: string;
   platform: 'twitch' | 'youtube' | 'kick' | 'tiktok' | 'custom';
   timestamp: string;
-  type: 'chat' | 'gift' | 'raid' | 'superchat';
+  type: 'chat' | 'gift' | 'raid' | 'superchat' | 'follow' | 'mod_action';
   author: {
     id: string;
     name: string;
@@ -13,6 +13,7 @@ export interface UIMessage {
     badges?: string[];
   };
   text?: string;
+  message?: string;
   fragments?: MessageFragment[];
   isDeleted: boolean;
   // Gift/SuperChat/Raid specific fields
@@ -22,6 +23,12 @@ export interface UIMessage {
   giftType?: string;
   viewerCount?: number;
   tier?: string;
+  // Moderation fields
+  moderationStatus?: string;
+  toxicityScore?: number;
+  action?: string;
+  reason?: string;
+  targetUserId?: string;
 }
 
 export function useChatFeed(url: string) {
@@ -61,7 +68,7 @@ export function useChatFeed(url: string) {
           }
 
           if (streamEvent) {
-            if (streamEvent.type === 'chat' || streamEvent.type === 'gift' || streamEvent.type === 'raid' || streamEvent.type === 'superchat') {
+            if (streamEvent.type === 'chat' || streamEvent.type === 'gift' || streamEvent.type === 'raid' || streamEvent.type === 'superchat' || streamEvent.type === 'follow') {
               let uiMsg: UIMessage;
               
               if (streamEvent.type === 'chat') {
@@ -73,7 +80,9 @@ export function useChatFeed(url: string) {
                   author: streamEvent.author,
                   text: streamEvent.message.text,
                   fragments: streamEvent.message.fragments,
-                  isDeleted: false
+                  isDeleted: false,
+                  moderationStatus: (streamEvent as any).moderationStatus,
+                  toxicityScore: (streamEvent as any).toxicityScore,
                 };
               } else if (streamEvent.type === 'gift') {
                 uiMsg = {
@@ -108,6 +117,15 @@ export function useChatFeed(url: string) {
                   tier: streamEvent.tier,
                   text: streamEvent.message,
                   fragments: streamEvent.message ? [{ type: 'text', text: streamEvent.message }] : [],
+                  isDeleted: false
+                };
+              } else if (streamEvent.type === 'follow') {
+                uiMsg = {
+                  eventId: streamEvent.eventId,
+                  platform: streamEvent.platform as any,
+                  timestamp: streamEvent.timestamp,
+                  type: 'follow',
+                  author: streamEvent.follower,
                   isDeleted: false
                 };
               } else {

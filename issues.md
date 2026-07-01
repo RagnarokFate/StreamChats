@@ -34,3 +34,19 @@ The project is a monorepo containing a real-time chat aggregation engine designe
 **Context**: The architecture is designed to be highly modular.
 **Issue**: The user wants to support **Kick** and **TikTok** live streams in the future.
 **Next Step**: Create `@obs-chat/connector-kick` and `@obs-chat/connector-tiktok` using the existing `BaseConnector` SDK, then add them to the `local-server` CLI parser. No changes to the UI or OBS plugin will be necessary.
+
+### 4. Desktop App: Bundle Node.js Server as Tauri Sidecar
+**Context**: The Tauri desktop app (`apps/desktop`) currently spawns the local server via `Command::new("node")` in `src-tauri/src/lib.rs`, which requires Node.js to be installed on the user's machine. This makes the desktop app unusable for non-technical users who don't have Node.js.
+**Issue**: The desktop app is not self-contained. Anyone without Node.js in their system PATH will see a crash on launch (`Failed to spawn node backend`). An installer should be sufficient for end users — no prior tooling required.
+**Scope**:
+  1. **Compile the local server into a standalone binary** using Node.js Single Executable Applications (SEA, built into Node 20+) or `pkg`. The binary must bundle the Node.js runtime, the compiled `dist/index.js`, and all production dependencies into a single executable.
+  2. **Register the binary as a Tauri sidecar** by adding `"externalBin": ["binaries/streamchats-server"]` to `tauri.conf.json` under the `bundle` key, and placing platform-specific binaries (suffixed with `-x86_64-pc-windows-msvc`, `-x86_64-unknown-linux-gnu`, `-aarch64-apple-darwin`, etc.) in `src-tauri/binaries/`.
+  3. **Update `lib.rs`** to replace `std::process::Command::new("node")` with `tauri::api::process::Command::new_sidecar("streamchats-server")`, using Tauri's managed sidecar lifecycle (proper startup, shutdown on app exit, and stdout/stderr forwarding).
+  4. **Add a build script** (`npm run build:sidecar` or similar) that compiles the server binary and copies it to the correct sidecar location before `tauri build`.
+  5. **Verify** that `tauri build` produces a platform-native installer (`.msi` / `.dmg` / `.AppImage`) that works on a clean machine without Node.js installed.
+**Files to modify**:
+  - `apps/desktop/src-tauri/tauri.conf.json` — add `externalBin` config
+  - `apps/desktop/src-tauri/src/lib.rs` — switch to sidecar API
+  - `apps/local-server/package.json` — add SEA/pkg build script
+  - `package.json` (root) — add `build:sidecar` orchestration script
+**Next Step**: Choose between Node.js SEA (zero extra dependencies, built into Node 20+) and `pkg` (more mature, broader compatibility), compile the server, register as sidecar, and test a clean install.

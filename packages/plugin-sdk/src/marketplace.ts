@@ -12,46 +12,48 @@ export class MarketplaceClient {
    * Mocks fetching available plugins from a remote registry.
    */
   async fetchAvailablePlugins(): Promise<MarketplacePlugin[]> {
-    // Mocking both free and premium plugins
-    return [
+    // In a real implementation, this would fetch from a central streamchats.dev API.
+    // For US5, we mock a static JSON registry.
+    const catalog: MarketplacePlugin[] = [
       {
-        id: 'profanity-filter',
-        name: 'Profanity Filter',
+        id: 'auto-welcomer',
+        name: 'Auto Welcomer',
         version: '1.0.0',
-        author: 'StreamChats',
-        description: 'Automatically intercepts and scrubs profanity from chat messages.',
-        entryPoint: 'dist/index.js',
-        permissions: ['read_chat', 'moderate_chat'],
-        downloadUrl: 'https://example.com/plugins/profanity-filter.zip',
-        isPremium: false,
-        tier: 'free'
-      },
-      {
-        id: 'auto-greeter',
-        name: 'Auto Greeter',
-        version: '1.1.0',
-        author: 'StreamChats',
-        description: 'Greets new chatters when they send their first message of the stream.',
-        entryPoint: 'dist/index.js',
+        author: 'StreamChats Team',
+        description: 'Automatically welcomes new chatters to the stream.',
+        entryPoint: 'index.js',
         permissions: ['read_chat', 'send_chat'],
-        downloadUrl: 'https://example.com/plugins/auto-greeter.zip',
+        downloadUrl: 'https://example.com/plugins/auto-welcomer.zip',
         isPremium: false,
         tier: 'free'
       },
       {
-        id: 'ai-summary',
-        name: 'AI Chat Summarizer',
-        version: '2.0.0',
-        author: 'StreamChats Pro',
-        description: 'Uses local AI to summarize long chat discussions automatically.',
-        entryPoint: 'dist/index.js',
-        permissions: ['read_chat'],
-        downloadUrl: 'https://example.com/plugins/ai-summary-locked.zip',
-        isPremium: true,
-        price: 9.99,
-        tier: 'pro'
+        id: 'chat-translator',
+        name: 'Chat Translator',
+        version: '1.0.0',
+        author: 'StreamChats Team',
+        description: 'Translates chat messages using an external API.',
+        entryPoint: 'index.js',
+        permissions: ['read_chat', 'send_chat', 'network'],
+        downloadUrl: 'https://example.com/plugins/chat-translator.zip',
+        isPremium: false,
+        tier: 'free'
+      },
+      {
+        id: 'local-logger',
+        name: 'Local Logger',
+        version: '1.0.0',
+        author: 'StreamChats Team',
+        description: 'Logs chat messages to a local file on the filesystem.',
+        entryPoint: 'index.js',
+        permissions: ['read_chat', 'filesystem'],
+        downloadUrl: 'https://example.com/plugins/local-logger.zip',
+        isPremium: false,
+        tier: 'free'
       }
     ];
+
+    return catalog;
   }
 
   /**

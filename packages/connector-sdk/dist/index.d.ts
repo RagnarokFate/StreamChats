@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ChatEvent, Platform, StreamEvent, ConnectorHealth } from '@obs-chat/event-schema';
+import { Platform, StreamEvent, ConnectorHealth } from '@obs-chat/event-schema';
 import { ConnectorLogger, LogLevel } from './logger';
 export declare enum ConnectorStatus {
     IDLE = "IDLE",
@@ -16,6 +16,7 @@ export declare enum CircuitState {
     HALF_OPEN = "HALF_OPEN"
 }
 export * from './logger';
+export * from './supervisor';
 export interface ConnectorOptions {
     platform: Platform;
     channelId: string;
@@ -63,6 +64,7 @@ export declare abstract class BaseConnector extends EventEmitter {
      */
     resume(): void;
     getStatus(): ConnectorStatus;
+    getChannelId(): string;
     protected setStatus(newStatus: ConnectorStatus): void;
     /**
      * Get the current circuit breaker state.
@@ -87,13 +89,7 @@ export declare abstract class BaseConnector extends EventEmitter {
      */
     getHealth(): ConnectorHealth;
     /**
-     * Dispatches a strictly validated ChatEvent to the listeners.
-     * (Backward compatible — preserved from v1)
-     */
-    protected dispatchMessage(event: ChatEvent): void;
-    /**
      * Generic event dispatch for all StreamEvent types (v2).
-     * Works alongside dispatchMessage() for backward compatibility.
      */
     protected dispatchEvent(event: StreamEvent): void;
     /**

@@ -25,10 +25,10 @@ export class TwitchConnector extends BaseConnector {
         const onOpen = () => {
           this.logger.info('WebSocket connected. Sending authentication.');
           if (!this.ws) return;
-          this.ws.send('PASS oauth:dummy');
-          this.ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`);
-          this.ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-          this.ws.send(`JOIN #${this.resolvedChannelId}`);
+          this.ws.send('PASS oauth:dummy\r\n');
+          this.ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}\r\n`);
+          this.ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands\r\n');
+          this.ws.send(`JOIN #${this.resolvedChannelId}\r\n`);
           
           this.reconnectCount = 0;
           this.setStatus(ConnectorStatus.CONNECTED);

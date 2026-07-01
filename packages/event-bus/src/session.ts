@@ -1,98 +1,107 @@
-import { EventBusStore } from './store';
-import crypto from 'crypto';
+import { StreamSession } from '@obs-chat/event-schema';
+import { EventStore } from './store';
+import { randomUUID } from 'crypto';
 
-/**
- * StreamSession lifecycle manager.
- * Handles session creation, ending, and crash detection on startup.
- */
-export class StreamSessionManager {
-  private store: EventBusStore;
-  private currentSessionId: string | null = null;
-  private retentionDays: number;
-  private retentionTimer: ReturnType<typeof setInterval> | null = null;
+export class SessionManager {
+  private store: EventStore;
+  private currentSession: StreamSession | null = null;
+  private maxCapacityEvents = 100000; // arbitrary high number for checking 80% capacity
 
-  constructor(store: EventBusStore, retentionDays: number = 14) {
+  constructor(store: EventStore) {
     this.store = store;
-    this.retentionDays = retentionDays;
   }
 
-  /**
-   * Initialize session management on startup.
-   * Detects crashed sessions and creates a new active session.
-   */
-  initialize(platforms: string[]): string {
-    // Step 1: Detect and mark any crashed sessions (active sessions from a previous run)
-    const crashedCount = this.store.markCrashedSessions();
-    if (crashedCount > 0) {
-      console.log(`[SessionManager] Detected ${crashedCount} crashed session(s) from previous run`);
+  public getActiveSession(): StreamSession | null {
+    if (this.currentSession) return this.currentSession;
+
+    // Check if there's a crashed or active session in DB (simplification: get latest session)
+    const db = this.store.getDatabase();
+    const row = db.prepare(`
+      SELECT * FROM sessions 
+      ORDER BY startedAt DESC LIMIT 1
+    `).get() as any;
+
+    if (row && (row.status === 'active' || row.status === 'crashed')) {
+      this.currentSession = {
+        ...row,
+        platforms: JSON.parse(row.platforms)
+      } as StreamSession;
+      return this.currentSession;
     }
 
-    // Step 2: Create a new session
-    const sessionId = crypto.randomUUID();
-    this.store.createSession(sessionId, platforms);
-    this.currentSessionId = sessionId;
-    console.log(`[SessionManager] Created new session: ${sessionId}`);
-
-    // Step 3: Run initial retention cleanup
-    this.runRetentionCleanup();
-
-    // Step 4: Schedule hourly retention cleanup
-    this.retentionTimer = setInterval(() => {
-      this.runRetentionCleanup();
-    }, 60 * 60 * 1000); // 1 hour
-
-    return sessionId;
+    return null;
   }
 
-  /**
-   * Get the current active session ID.
-   */
-  getCurrentSessionId(): string | null {
-    return this.currentSessionId;
+  public startSession(platforms: string[] = []): StreamSession {
+    const active = this.getActiveSession();
+    if (active) {
+      if (active.status === 'active') {
+        return active; // already active
+      } else if (active.status === 'crashed') {
+        // recover
+        active.status = 'active';
+        this.store.updateSession(active);
+        return active;
+      }
+    }
+
+    const newSession: StreamSession = {
+      sessionId: randomUUID(),
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      platforms: platforms as any,
+      totalEvents: 0,
+      lastSequenceNumber: 0,
+      status: 'active',
+    };
+
+    this.store.createSession(newSession);
+    this.currentSession = newSession;
+    return newSession;
   }
 
-  /**
-   * End the current session gracefully.
-   */
-  endCurrentSession(): void {
-    if (this.currentSessionId) {
-      this.store.endSession(this.currentSessionId);
-      console.log(`[SessionManager] Ended session: ${this.currentSessionId}`);
-      this.currentSessionId = null;
+  public clearSession(): void {
+    this.currentSession = null;
+  }
+
+  public endSession(): void {
+    if (this.currentSession) {
+      this.currentSession.endedAt = new Date().toISOString();
+      this.currentSession.status = 'ended';
+      this.store.updateSession(this.currentSession);
+      this.currentSession = null;
     }
   }
 
-  /**
-   * Delete sessions older than the retention period.
-   * Runs on startup and hourly thereafter.
-   */
-  private runRetentionCleanup(): void {
+  public checkCapacity(): { isNearCapacity: boolean; percentage: number } {
+    if (!this.currentSession) return { isNearCapacity: false, percentage: 0 };
+    const percentage = (this.currentSession.totalEvents / this.maxCapacityEvents) * 100;
+    return {
+      isNearCapacity: percentage >= 80,
+      percentage
+    };
+  }
+
+  public enforceRetentionPolicy(days: number = 14): number {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
-    const cutoffIso = cutoffDate.toISOString();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString();
 
-    const deletedCount = this.store.deleteSessionsBefore(cutoffIso);
-    if (deletedCount > 0) {
-      console.log(`[SessionManager] Retention cleanup: deleted ${deletedCount} session(s) older than ${this.retentionDays} days`);
+    const db = this.store.getDatabase();
+    // find sessions older than cutoff and ended
+    const oldSessions = db.prepare(`
+      SELECT sessionId FROM sessions 
+      WHERE endedAt < ? AND status = 'ended'
+    `).all(cutoffStr) as { sessionId: string }[];
+
+    let deletedCount = 0;
+    for (const row of oldSessions) {
+      db.prepare('DELETE FROM events WHERE sessionId = ?').run(row.sessionId);
+      db.prepare('DELETE FROM stream_markers WHERE sessionId = ?').run(row.sessionId);
+      db.prepare('DELETE FROM sessions WHERE sessionId = ?').run(row.sessionId);
+      deletedCount++;
     }
 
-    // Check disk usage warning
-    const sizeBytes = this.store.getDatabaseSizeBytes();
-    const maxBytes = 2 * 1024 * 1024 * 1024; // 2GB default
-    const usagePercent = (sizeBytes / maxBytes) * 100;
-    if (usagePercent >= 80) {
-      console.warn(`[SessionManager] WARNING: Database at ${usagePercent.toFixed(1)}% capacity (${(sizeBytes / 1024 / 1024).toFixed(1)}MB / ${(maxBytes / 1024 / 1024).toFixed(0)}MB)`);
-    }
-  }
-
-  /**
-   * Clean up resources on shutdown.
-   */
-  destroy(): void {
-    if (this.retentionTimer) {
-      clearInterval(this.retentionTimer);
-      this.retentionTimer = null;
-    }
-    this.endCurrentSession();
+    return deletedCount;
   }
 }
