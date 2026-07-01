@@ -142,6 +142,10 @@ export abstract class BaseConnector extends EventEmitter {
     return this.status;
   }
 
+  public getChannelId(): string {
+    return this.options.channelId;
+  }
+
   protected setStatus(newStatus: ConnectorStatus): void {
     this.status = newStatus;
     this.emit('status_change', this.status);

@@ -77,6 +77,7 @@ export function PlatformHealth({ statusUpdate, sendCommand }: PlatformHealthProp
                   <>
                     <div style={{ fontSize: '0.85rem', color: '#aaa' }}>
                       Status: <strong style={{ color: getStatusColor(connectedState.status) }}>{connectedState.status}</strong>
+                      {connectedState.channelId && <span style={{ marginLeft: '8px', color: '#fff' }}>• Username: <strong style={{color: '#4fc3f7'}}>{connectedState.channelId}</strong></span>}
                       {connectedState.lastConnectedAt && ` • Last Connected: ${new Date(connectedState.lastConnectedAt).toLocaleTimeString()}`}
                     </div>
                     {connectedState.lastError && (

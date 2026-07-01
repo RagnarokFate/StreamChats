@@ -319,8 +319,9 @@ exports.ExportSessionCommandSchema = zod_1.z.object({
     action: zod_1.z.literal('export_session'),
     payload: zod_1.z.object({
         sessionId: zod_1.z.string().uuid(),
-        format: zod_1.z.enum(['csv', 'timestamped_log']),
+        format: zod_1.z.enum(['csv', 'timestamped_log', 'json']),
         includeModeration: zod_1.z.boolean().default(true),
+        destinationPath: zod_1.z.string().optional(),
     }),
 });
 exports.RequestAnalyticsCommandSchema = zod_1.z.object({
@@ -435,6 +436,11 @@ exports.CommandEventV2Schema = zod_1.z.discriminatedUnion('action', [
     zod_1.z.object({
         type: zod_1.z.literal('command'),
         action: zod_1.z.literal('restore_database'),
+        payload: zod_1.z.object({}),
+    }),
+    zod_1.z.object({
+        type: zod_1.z.literal('command'),
+        action: zod_1.z.literal('simulate_test_message'),
         payload: zod_1.z.object({}),
     }),
     zod_1.z.object({

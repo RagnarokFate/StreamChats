@@ -177,13 +177,36 @@ export function SessionReplay({ wsUrl }: SessionReplayProps) {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (ws && ws.readyState === WebSocket.OPEN && selectedSessionId) {
-      ws.send(JSON.stringify({
-        type: 'command',
-        action: 'export_session',
-        payload: { sessionId: selectedSessionId, format: 'json' }
-      }));
+      if ((window as any).__TAURI__) {
+        try {
+          const { save } = await import('@tauri-apps/plugin-dialog');
+          const filePath = await save({
+            filters: [{
+              name: 'JSON',
+              extensions: ['json']
+            }],
+            defaultPath: `session-${selectedSessionId}.json`
+          });
+          
+          if (filePath) {
+            ws.send(JSON.stringify({
+              type: 'command',
+              action: 'export_session',
+              payload: { sessionId: selectedSessionId, format: 'json', destinationPath: filePath }
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to open Tauri save dialog", err);
+        }
+      } else {
+        ws.send(JSON.stringify({
+          type: 'command',
+          action: 'export_session',
+          payload: { sessionId: selectedSessionId, format: 'json' }
+        }));
+      }
     }
   };
 

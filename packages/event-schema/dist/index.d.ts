@@ -2611,32 +2611,37 @@ export declare const ExportSessionCommandSchema: z.ZodObject<{
     action: z.ZodLiteral<"export_session">;
     payload: z.ZodObject<{
         sessionId: z.ZodString;
-        format: z.ZodEnum<["csv", "timestamped_log"]>;
+        format: z.ZodEnum<["csv", "timestamped_log", "json"]>;
         includeModeration: z.ZodDefault<z.ZodBoolean>;
+        destinationPath: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration: boolean;
+        destinationPath?: string | undefined;
     }, {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration?: boolean | undefined;
+        destinationPath?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     type: "command";
     action: "export_session";
     payload: {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration: boolean;
+        destinationPath?: string | undefined;
     };
 }, {
     type: "command";
     action: "export_session";
     payload: {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration?: boolean | undefined;
+        destinationPath?: string | undefined;
     };
 }>;
 export type ExportSessionCommand = z.infer<typeof ExportSessionCommandSchema>;
@@ -3345,32 +3350,37 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
     action: z.ZodLiteral<"export_session">;
     payload: z.ZodObject<{
         sessionId: z.ZodString;
-        format: z.ZodEnum<["csv", "timestamped_log"]>;
+        format: z.ZodEnum<["csv", "timestamped_log", "json"]>;
         includeModeration: z.ZodDefault<z.ZodBoolean>;
+        destinationPath: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration: boolean;
+        destinationPath?: string | undefined;
     }, {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration?: boolean | undefined;
+        destinationPath?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     type: "command";
     action: "export_session";
     payload: {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration: boolean;
+        destinationPath?: string | undefined;
     };
 }, {
     type: "command";
     action: "export_session";
     payload: {
         sessionId: string;
-        format: "csv" | "timestamped_log";
+        format: "csv" | "timestamped_log" | "json";
         includeModeration?: boolean | undefined;
+        destinationPath?: string | undefined;
     };
 }>, z.ZodObject<{
     type: z.ZodLiteral<"command">;
@@ -3556,6 +3566,18 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
 }, {
     type: "command";
     action: "restore_database";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"simulate_test_message">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "simulate_test_message";
+    payload: {};
+}, {
+    type: "command";
+    action: "simulate_test_message";
     payload: {};
 }>, z.ZodObject<{
     type: z.ZodLiteral<"command">;

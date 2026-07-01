@@ -384,8 +384,9 @@ export const ExportSessionCommandSchema = z.object({
   action: z.literal('export_session'),
   payload: z.object({
     sessionId: z.string().uuid(),
-    format: z.enum(['csv', 'timestamped_log']),
+    format: z.enum(['csv', 'timestamped_log', 'json']),
     includeModeration: z.boolean().default(true),
+    destinationPath: z.string().optional(),
   }),
 });
 export type ExportSessionCommand = z.infer<typeof ExportSessionCommandSchema>;
@@ -520,6 +521,11 @@ export const CommandEventV2Schema = z.discriminatedUnion('action', [
   z.object({
     type: z.literal('command'),
     action: z.literal('restore_database'),
+    payload: z.object({}),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('simulate_test_message'),
     payload: z.object({}),
   }),
   z.object({

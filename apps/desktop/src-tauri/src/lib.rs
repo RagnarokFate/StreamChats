@@ -2,12 +2,13 @@ use std::process::{Command, Stdio};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, Emitter,
+    Emitter, Manager,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -32,7 +33,7 @@ pub fn run() {
                     .stderr(Stdio::inherit())
                     .spawn()
                     .expect("Failed to spawn node backend. Ensure node is in PATH.");
-                
+
                 let _ = child.wait();
             });
 

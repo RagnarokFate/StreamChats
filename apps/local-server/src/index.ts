@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { TwitchConnector } from '@obs-chat/connector-twitch';
 import { YouTubeConnector } from '@obs-chat/connector-youtube';
 import { KickConnector } from '@obs-chat/connector-kick';
@@ -107,7 +108,7 @@ async function bootstrap() {
           platform: h.platform,
           status: (supervisor.getConnectorByPlatform(h.platform)?.getStatus() || 'IDLE') as any,
           reconnectCount: 0,
-          channelId: '',
+          channelId: supervisor.getConnectorByPlatform(h.platform)?.getChannelId() || '',
           lastError: null,
           health: h
         })),
@@ -160,16 +161,29 @@ async function bootstrap() {
           const format = command.payload.format;
           const fs = require('fs');
           const path = require('path');
-          const exportDir = path.resolve(process.cwd(), 'exports');
-          if (!fs.existsSync(exportDir)) {
-            fs.mkdirSync(exportDir, { recursive: true });
+          let filePath = command.payload.destinationPath;
+          if (!filePath) {
+            const exportDir = path.resolve(process.cwd(), 'exports');
+            if (!fs.existsSync(exportDir)) {
+              fs.mkdirSync(exportDir, { recursive: true });
+            }
+            if (format === 'csv') {
+              filePath = path.join(exportDir, `session-${sessionId}.csv`);
+            } else if (format === 'timestamped_log') {
+              filePath = path.join(exportDir, `session-${sessionId}.log`);
+            } else if (format === 'json') {
+              filePath = path.join(exportDir, `session-${sessionId}.json`);
+            }
           }
-          let filePath = '';
+          
           if (format === 'csv') {
-            filePath = sessionExporter.exportToCSV(sessionId, path.join(exportDir, `session-${sessionId}.csv`));
+            filePath = sessionExporter.exportToCSV(sessionId, filePath);
           } else if (format === 'timestamped_log') {
-            filePath = sessionExporter.exportToTimestampedLog(sessionId, path.join(exportDir, `session-${sessionId}.log`));
+            filePath = sessionExporter.exportToTimestampedLog(sessionId, filePath);
+          } else if (format === 'json') {
+            filePath = sessionExporter.exportToVODFormat(sessionId, filePath);
           }
+          
           server.broadcastToAll({
             type: 'command_response',
             action: 'export_complete',
@@ -225,6 +239,28 @@ async function bootstrap() {
     } else if (command.action === 'delete_marker') {
       const db = eventBus.getStore().getDatabase();
       db.prepare('DELETE FROM stream_markers WHERE markerId = ?').run(command.payload.markerId);
+    } else if (command.action === 'simulate_test_message') {
+      const testEvent = {
+        eventId: crypto.randomUUID(),
+        type: 'chat',
+        platform: 'twitch',
+        timestamp: new Date().toISOString(),
+        author: {
+          id: 'test-user',
+          name: 'TestStreamer',
+          color: '#ff4d4f',
+          badges: []
+        },
+        message: {
+          text: 'This is a test message from Quick Actions! 👋',
+          fragments: [
+            { type: 'text', text: 'This is a test message from Quick Actions! 👋' }
+          ]
+        },
+        moderationStatus: 'visible',
+        toxicityScore: 0
+      };
+      eventBus.publish(testEvent as any);
     } else if (command.action === 'reset_stats') {
       const session = eventBus.getSessionManager().getActiveSession();
       if (session) {
@@ -269,13 +305,53 @@ async function bootstrap() {
           const pluginsDir = path.resolve(process.cwd(), 'plugins', pluginId);
           if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
           fs.writeFileSync(path.join(pluginsDir, 'manifest.json'), JSON.stringify(plugin, null, 2));
-          fs.writeFileSync(path.join(pluginsDir, plugin.entryPoint), `
-            StreamChats.subscribe((event) => {
-              if (event.type === 'chat_message') {
-                console.log('Received message:', event.payload.message);
+          let code = '';
+          if (pluginId === 'auto-welcomer') {
+            code = `
+              const seenUsers = new Set();
+              function generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+                });
               }
-            });
-          `);
+              StreamChats.subscribe((event) => {
+                if (event.type === 'chat') {
+                  const userId = event.author?.id || event.author?.name;
+                  if (userId && !seenUsers.has(userId)) {
+                    seenUsers.add(userId);
+                    // Generate a welcome message event
+                    const welcomeEvent = {
+                      eventId: generateUUID(),
+                      type: 'chat',
+                      platform: event.platform,
+                      timestamp: new Date().toISOString(),
+                      author: {
+                        id: 'system-welcomer',
+                        name: 'AutoWelcomer',
+                        color: '#ffaa00',
+                        badges: []
+                      },
+                      message: {
+                        text: 'Welcome to the stream, @' + (event.author?.name || 'user') + '!',
+                        fragments: [{ type: 'text', text: 'Welcome to the stream, @' + (event.author?.name || 'user') + '!' }]
+                      },
+                      moderationStatus: 'visible',
+                      toxicityScore: 0
+                    };
+                    StreamChats.publish(welcomeEvent);
+                  }
+                }
+              });
+            `;
+          } else {
+            code = `
+              StreamChats.subscribe((event) => {
+                console.log('Plugin ' + '${pluginId}' + ' received event:', event.type);
+              });
+            `;
+          }
+          fs.writeFileSync(path.join(pluginsDir, plugin.entryPoint), code);
           await pluginManager.loadPlugin(pluginId);
         }
       } else if (operation === 'uninstall') {
@@ -376,7 +452,7 @@ async function bootstrap() {
         platform: h.platform,
         status: conn ? conn.getStatus() : 'IDLE',
         reconnectCount: 0,
-        channelId: '',
+        channelId: conn ? conn.getChannelId() : '',
         lastError: null,
         health: h
       } as PlatformStatus;

@@ -125,6 +125,9 @@ class BaseConnector extends events_1.EventEmitter {
     getStatus() {
         return this.status;
     }
+    getChannelId() {
+        return this.options.channelId;
+    }
     setStatus(newStatus) {
         this.status = newStatus;
         this.emit('status_change', this.status);

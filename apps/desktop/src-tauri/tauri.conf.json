@@ -12,11 +12,10 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "StreamChats",
         "width": 1200,
         "height": 800,
-        "hiddenTitle": true,
-        "titleBarStyle": "Overlay",
         "visible": true
       }
     ],

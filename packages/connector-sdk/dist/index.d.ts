@@ -64,6 +64,7 @@ export declare abstract class BaseConnector extends EventEmitter {
      */
     resume(): void;
     getStatus(): ConnectorStatus;
+    getChannelId(): string;
     protected setStatus(newStatus: ConnectorStatus): void;
     /**
      * Get the current circuit breaker state.
