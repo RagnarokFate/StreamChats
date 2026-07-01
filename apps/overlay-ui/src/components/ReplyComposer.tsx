@@ -19,7 +19,7 @@ export function ReplyComposer({ sendCommand, replyToEventId, defaultPlatform = '
 
     sendCommand({
       type: 'command',
-      action: 'reply_message',
+      action: 'reply_message' as any,
       payload: {
         platform,
         message,

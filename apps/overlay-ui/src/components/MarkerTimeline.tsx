@@ -3,29 +3,64 @@ import { CommandEventV2 } from '@obs-chat/event-schema';
 
 interface MarkerTimelineProps {
   sendCommand: (command: CommandEventV2) => void;
+  wsUrl?: string;
 }
 
-export function MarkerTimeline({ sendCommand }: MarkerTimelineProps) {
+export function MarkerTimeline({ sendCommand, wsUrl }: MarkerTimelineProps) {
   const [label, setLabel] = useState('');
   const [placedMarkers, setPlacedMarkers] = useState<{ id: string, label: string, time: string }[]>([]);
+
+  React.useEffect(() => {
+    if (!wsUrl) return;
+    const socket = new WebSocket(wsUrl);
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: 'handshake', protocol_version: 2 }));
+      socket.send(JSON.stringify({ type: 'command', action: 'get_markers', payload: {} }));
+    };
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'command_response' && msg.action === 'markers_list') {
+           const formatted = msg.payload.markers.map((m: any) => ({
+             id: m.id,
+             label: m.label || 'Unnamed Marker',
+             time: new Date(m.time).toLocaleTimeString()
+           }));
+           setPlacedMarkers(formatted);
+        }
+      } catch (e) {}
+    };
+    return () => socket.close();
+  }, [wsUrl]);
 
   const handlePlaceMarker = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const generatedId = Math.random().toString(36).substring(7);
+
     sendCommand({
       type: 'command',
       action: 'place_marker',
-      payload: { label: label.trim() || undefined }
+      payload: { markerId: generatedId, label: label.trim() || undefined }
     });
 
     const newMarker = {
-      id: Math.random().toString(36).substring(7),
+      id: generatedId,
       label: label.trim() || 'Unnamed Marker',
       time: new Date().toLocaleTimeString()
     };
 
     setPlacedMarkers(prev => [newMarker, ...prev]);
     setLabel('');
+  };
+
+  const handleDeleteMarker = (id: string | number) => {
+    sendCommand({
+      type: 'command',
+      action: 'delete_marker',
+      payload: { markerId: String(id) }
+    } as any);
+    setPlacedMarkers(prev => prev.filter(m => m.id !== id));
   };
 
   return (
@@ -94,7 +129,21 @@ export function MarkerTimeline({ sendCommand }: MarkerTimelineProps) {
                 borderLeft: '4px solid #007acc'
               }}>
                 <span style={{ color: '#aaa', fontFamily: 'monospace', fontSize: '0.9rem' }}>{marker.time}</span>
-                <span style={{ color: '#fff', fontWeight: 500 }}>{marker.label}</span>
+                <span style={{ color: '#fff', fontWeight: 500, flex: 1 }}>{marker.label}</span>
+                <button 
+                  onClick={() => handleDeleteMarker(marker.id)}
+                  style={{
+                    background: '#e74c3c',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>

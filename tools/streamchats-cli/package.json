@@ -9,7 +9,10 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "simulate": "node dist/index.js simulate",
+    "test-plugin": "node dist/index.js test",
+    "create-plugin": "node dist/index.js create-plugin"
   },
   "dependencies": {
     "@obs-chat/event-bus": "*",

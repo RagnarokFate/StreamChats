@@ -1,76 +1,108 @@
-import { useState, useEffect, useRef } from 'react';
-import { PluginStatusEvent } from '@obs-chat/event-schema';
+import { useState, useEffect } from 'react';
 
-export interface PluginInfo {
+export interface PluginManifest {
   id: string;
   name: string;
   version: string;
-  author?: string;
   description?: string;
+  author?: string;
   permissions: string[];
 }
 
-export function usePlugins(url: string) {
-  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [pluginStatuses, setPluginStatuses] = useState<Record<string, string>>({});
-  const ws = useRef<WebSocket | null>(null);
+export interface MarketplacePlugin extends PluginManifest {
+  downloadUrl: string;
+  isPremium?: boolean;
+  price?: number;
+  tier?: string;
+}
+
+export interface InstalledPlugin extends PluginManifest {
+  status: 'active' | 'disabled' | 'needs_permission';
+  missingPermissions?: string[];
+}
+
+export function usePlugins(wsUrl: string) {
+  const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
+  const [catalog, setCatalog] = useState<MarketplacePlugin[]>([]);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    ws.current = new WebSocket(url);
-
-    ws.current.onopen = () => {
-      // Request initial list of plugins
-      ws.current?.send(JSON.stringify({
-        type: 'command',
-        action: 'manage_plugin',
-        payload: { action: 'list' }
-      }));
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      setSocket(ws);
+      // Fetch initial state
+      ws.send(JSON.stringify({ type: 'command', action: 'list_plugins', payload: {} }));
+      ws.send(JSON.stringify({ type: 'command', action: 'get_marketplace', payload: {} }));
     };
 
-    ws.current.onmessage = (event) => {
+    ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'plugin_status') {
-          const payload = data as PluginStatusEvent & { plugins?: PluginInfo[] };
-          
-          if (payload.status === 'listed' && payload.plugins) {
-            setPlugins(payload.plugins);
-            // Initialize all listed plugins as active for now (in a real implementation, we'd track state accurately)
-            const statuses: Record<string, string> = {};
-            payload.plugins.forEach(p => statuses[p.id] = 'active');
-            setPluginStatuses(statuses);
-          } else {
-            setPluginStatuses(prev => ({
-              ...prev,
-              [payload.pluginId]: payload.status
-            }));
+        if (data.type === 'command_response') {
+          if (data.action === 'plugins_list') {
+            setPlugins(data.payload.plugins);
+          } else if (data.action === 'marketplace_catalog') {
+            setCatalog(data.payload.catalog);
           }
         }
       } catch (err) {
-        console.error('Failed to parse websocket message', err);
+        console.error('Failed to parse WS message in usePlugins:', err);
       }
     };
 
     return () => {
-      ws.current?.close();
+      ws.close();
     };
-  }, [url]);
+  }, [wsUrl]);
 
-  const togglePlugin = (id: string, active: boolean) => {
-    ws.current?.send(JSON.stringify({
-      type: 'command',
-      action: 'manage_plugin',
-      payload: { pluginId: id, action: active ? 'enable' : 'disable' }
-    }));
+  const installPlugin = (pluginId: string) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'command',
+        action: 'manage_plugin',
+        payload: { pluginId, operation: 'install' }
+      }));
+    }
   };
 
-  const installPlugin = (id: string) => {
-    ws.current?.send(JSON.stringify({
-      type: 'command',
-      action: 'manage_plugin',
-      payload: { pluginId: id, action: 'install' }
-    }));
+  const uninstallPlugin = (pluginId: string) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'command',
+        action: 'manage_plugin',
+        payload: { pluginId, operation: 'uninstall' }
+      }));
+    }
   };
 
-  return { plugins, pluginStatuses, togglePlugin, installPlugin };
+  const grantCapabilities = (pluginId: string, capabilities: string[]) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'command',
+        action: 'grant_plugin_capabilities',
+        payload: { pluginId, capabilities }
+      }));
+    }
+  };
+
+  const togglePlugin = (pluginId: string, currentStatus: string) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      const operation = currentStatus === 'active' ? 'disable' : 'enable';
+      socket.send(JSON.stringify({
+        type: 'command',
+        action: 'manage_plugin',
+        payload: { pluginId, operation }
+      }));
+    }
+  };
+
+  return {
+    plugins,
+    catalog,
+    installPlugin,
+    uninstallPlugin,
+    grantCapabilities,
+    togglePlugin
+  };
 }

@@ -2,15 +2,16 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { UIMessage } from '../hooks/useChatFeed';
 import { ChatMessage } from './ChatMessage';
 import { useSettings } from '../hooks/useSettings';
-import { Platform } from '@obs-chat/event-schema';
+import { Platform, CommandEventV2 } from '@obs-chat/event-schema';
 
 interface Props {
   messages: UIMessage[];
   identities?: any[];
   accounts?: any[];
+  sendCommand?: (command: CommandEventV2) => void;
 }
 
-export function ChatFeed({ messages, identities = [], accounts = [] }: Props) {
+export function ChatFeed({ messages, identities = [], accounts = [], sendCommand }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
   
@@ -18,8 +19,13 @@ export function ChatFeed({ messages, identities = [], accounts = [] }: Props) {
   const [localMessages, setLocalMessages] = useState<UIMessage[]>([]);
 
   useEffect(() => {
-    setLocalMessages(messages);
-  }, [messages]);
+    // Only show suppressed messages in moderator view
+    if (settings.viewMode === 'moderator') {
+      setLocalMessages(messages);
+    } else {
+      setLocalMessages(messages.filter(m => m.moderationStatus !== 'suppressed'));
+    }
+  }, [messages, settings.viewMode]);
 
   // Auto-scroll to bottom whenever a new message arrives
   useEffect(() => {
@@ -58,6 +64,7 @@ export function ChatFeed({ messages, identities = [], accounts = [] }: Props) {
                 onAnimationComplete={handleRemove}
                 identities={identities}
                 accounts={accounts}
+                sendCommand={sendCommand}
               />
             ))}
           </div>
@@ -78,6 +85,7 @@ export function ChatFeed({ messages, identities = [], accounts = [] }: Props) {
           onAnimationComplete={handleRemove}
           identities={identities}
           accounts={accounts}
+          sendCommand={sendCommand}
         />
       ))}
       <div ref={bottomRef} />

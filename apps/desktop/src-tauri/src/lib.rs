@@ -2,13 +2,24 @@ use std::process::{Command, Stdio};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Manager, Emitter,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcut("CmdOrCtrl+Alt+Shift+O")
+                .unwrap()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = app.emit("global-shortcut-marker", ());
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             // Start the node.js backend as a child process using std::process::Command
             // Note: In production, this would be a packaged sidecar binary instead of node.

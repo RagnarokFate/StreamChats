@@ -10,6 +10,10 @@ export class ToxicityFilter {
     this.threshold = threshold;
   }
 
+  public setThreshold(threshold: number): void {
+    this.threshold = threshold;
+  }
+
   public async init(): Promise<void> {
     if (!this.initPromise) {
       this.initPromise = (async () => {
@@ -22,13 +26,17 @@ export class ToxicityFilter {
   }
 
   public async handle(event: StreamEvent): Promise<StreamEvent> {
-    if (!('text' in event) || typeof event.text !== 'string' || !this.classifier) {
+    const text = event.type === 'chat' && event.message?.text 
+                 ? event.message.text 
+                 : (('text' in event && typeof (event as any).text === 'string') ? (event as any).text : null);
+
+    if (!text || !this.classifier) {
       return event;
     }
 
     try {
       // The classifier returns an array of label/score objects
-      const result = await this.classifier(event.text);
+      const result = await this.classifier(text);
       let isToxic = false;
       let toxicityScore = 0;
 

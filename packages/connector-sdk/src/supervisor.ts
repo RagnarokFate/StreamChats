@@ -160,6 +160,19 @@ export class ConnectorSupervisor extends EventEmitter {
   }
 
   /**
+   * Remove a connector from supervision.
+   */
+  async removeConnector(platform: Platform, channelId: string): Promise<void> {
+    const key = `${platform}:${channelId}`;
+    const managed = this.connectors.get(key);
+    if (managed) {
+      await managed.connector.stop();
+      managed.connector.removeAllListeners();
+      this.connectors.delete(key);
+    }
+  }
+
+  /**
    * Reconnect a specific connector.
    */
   async reconnectConnector(platform: Platform, channelId: string): Promise<void> {

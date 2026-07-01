@@ -63,7 +63,7 @@ export function Dashboard({ sendCommand, messages, statusUpdate, identities, acc
           <li><Link to="/dashboard/platforms" style={linkStyle(pathname === '/dashboard/platforms')}>🔌 Platforms</Link></li>
           <li><Link to="/dashboard/moderation" style={linkStyle(pathname === '/dashboard/moderation')}>🛡️ Moderation</Link></li>
           <li><Link to="/dashboard/identity" style={linkStyle(pathname === '/dashboard/identity')}>👤 Identity</Link></li>
-          <li><Link to="/dashboard/analytics" style={linkStyle(pathname === '/dashboard/analytics')}>📈 Analytics</Link></li>
+          <li><Link to="/dashboard/analytics" style={linkStyle(pathname === '/dashboard/analytics')}>📊 Analytics</Link></li>
           <li><Link to="/dashboard/replay" style={linkStyle(pathname === '/dashboard/replay')}>⏪ Replay</Link></li>
           <li><Link to="/dashboard/plugins" style={linkStyle(pathname === '/dashboard/plugins')}>🧩 Plugins</Link></li>
           <li><Link to="/dashboard/cloud-sync" style={linkStyle(pathname === '/dashboard/cloud-sync')}>☁️ Cloud Sync</Link></li>
@@ -75,23 +75,18 @@ export function Dashboard({ sendCommand, messages, statusUpdate, identities, acc
         <Routes>
           <Route path="/" element={<ChatControls sendCommand={sendCommand} />} />
           <Route path="overlay" element={<ThemeEditor sendCommand={sendCommand} />} />
-          <Route path="markers" element={<MarkerTimeline sendCommand={sendCommand} />} />
+          <Route path="markers" element={<MarkerTimeline sendCommand={sendCommand} wsUrl={wsUrl} />} />
           <Route path="stats" element={<StatsPanel sendCommand={sendCommand} statusUpdate={statusUpdate} />} />
           <Route path="platforms" element={<PlatformHealth sendCommand={sendCommand} statusUpdate={statusUpdate} />} />
           <Route path="moderation" element={<ModerationSettings sendCommand={sendCommand} statusUpdate={statusUpdate} />} />
           <Route path="identity" element={<IdentityPanel 
+            sendCommand={sendCommand} 
             identities={identities} 
             accounts={accounts} 
-            linkIdentity={(platform, userId, username, targetId) => {
-              sendCommand({
-                type: 'command',
-                action: 'link_identity',
-                payload: { platform, platformUserId: userId, platformUsername: username, identityId: targetId || null, method: 'manual' }
-              });
-            }} 
+            refresh={() => sendCommand({type: 'command', action: 'get_identities', payload: {}})}
           />} />
           <Route path="analytics" element={<AnalyticsPanel wsUrl={wsUrl} />} />
-          <Route path="replay" element={<SessionReplay />} />
+          <Route path="replay" element={<SessionReplay wsUrl={wsUrl} />} />
           <Route path="plugins" element={<PluginManagerPanel wsUrl={wsUrl} />} />
           <Route path="cloud-sync" element={<CloudSyncPanel />} />
           <Route path="obs" element={<OBSDock wsUrl={wsUrl} />} />
@@ -104,7 +99,7 @@ export function Dashboard({ sendCommand, messages, statusUpdate, identities, acc
         </div>
         <div data-theme={settings.activeTheme} style={{ flex: 1, overflow: 'hidden', position: 'relative', ...cssVariables }}>
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px' }}>
-            <ChatFeed messages={messages} identities={identities} accounts={accounts} />
+            <ChatFeed messages={messages} identities={identities} accounts={accounts} sendCommand={sendCommand} />
           </div>
         </div>
       </aside>

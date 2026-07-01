@@ -20,6 +20,7 @@ export enum CircuitState {
 }
 
 export * from './logger';
+export * from './supervisor';
 
 export interface ConnectorOptions {
   platform: Platform;
@@ -238,22 +239,10 @@ export abstract class BaseConnector extends EventEmitter {
 
   // ── Event Dispatch ─────────────────────────────────────────────────────
 
-  /**
-   * Dispatches a strictly validated ChatEvent to the listeners.
-   * (Backward compatible — preserved from v1)
-   */
-  protected dispatchMessage(event: ChatEvent): void {
-    if (this.status === ConnectorStatus.CONNECTED) {
-      this.totalEvents++;
-      this.lastEventTime = new Date();
-      this.recordSuccess();
-      this.emit('chat_message', event);
-    }
-  }
+
 
   /**
    * Generic event dispatch for all StreamEvent types (v2).
-   * Works alongside dispatchMessage() for backward compatibility.
    */
   protected dispatchEvent(event: StreamEvent): void {
     if (this.status === ConnectorStatus.CONNECTED || this.status === ConnectorStatus.PAUSED) {
@@ -263,11 +252,6 @@ export abstract class BaseConnector extends EventEmitter {
       this.lastLatencyMs = Date.now() - startTime;
       this.recordSuccess();
       this.emit('stream_event', event);
-
-      // Backward compatibility: also emit chat_message for chat events
-      if (event.type === 'chat') {
-        this.emit('chat_message', event as ChatEvent);
-      }
     }
   }
 

@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { createPluginCommand } from './commands/create-plugin';
 import { simulateCommand } from './commands/simulate';
+import { testCommand } from './commands/test';
 
 const program = new Command();
 
@@ -13,5 +14,6 @@ program
 
 program.addCommand(createPluginCommand);
 program.addCommand(simulateCommand);
+program.addCommand(testCommand);
 
 program.parse(process.argv);

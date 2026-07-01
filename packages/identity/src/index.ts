@@ -20,8 +20,12 @@ export interface PlatformAccount {
 export class IdentityStore {
   private db: Database.Database;
 
-  constructor(dbPath: string = 'identities.db') {
-    this.db = new Database(dbPath);
+  constructor(dbOrPath: Database.Database | string = 'identities.db') {
+    if (typeof dbOrPath === 'string') {
+      this.db = new Database(dbOrPath);
+    } else {
+      this.db = dbOrPath;
+    }
     this.initSchema();
   }
 

@@ -18,11 +18,11 @@
 
 **Purpose**: Project initialization and basic structure for new packages and apps
 
-- [ ] T001 Create new packages `event-bus`, `identity`, `analytics`, `plugin-sdk`, `obs-integration` under `packages/` with `package.json` and `tsconfig.json`
-- [ ] T002 Create new CLI workspace `streamchats-cli` under `tools/` with `package.json` and `tsconfig.json`
-- [ ] T003 Create new Tauri app `desktop` under `apps/` using `@tauri-apps/api`
-- [ ] T004 Run `npm install` from repository root to link workspaces
-- [ ] T005 Create empty `src/` directories and `index.ts` entry points for all new packages
+- [x] T001 Create new packages `event-bus`, `identity`, `analytics`, `plugin-sdk`, `obs-integration` under `packages/` with `package.json` and `tsconfig.json`
+- [x] T002 Create new CLI workspace `streamchats-cli` under `tools/` with `package.json` and `tsconfig.json`
+- [x] T003 Create new Tauri app `desktop` under `apps/` using `@tauri-apps/api`
+- [x] T004 Run `npm install` from repository root to link workspaces
+- [x] T005 Create empty `src/` directories and `index.ts` entry points for all new packages
 
 ---
 
@@ -32,13 +32,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Install `better-sqlite3` and `zod` in `packages/event-bus`
-- [ ] T007 Implement SQLite `store.ts` with WAL mode and tables: `events`, `sessions`, `stream_markers`, `viewer_identities`, `platform_accounts`, `reputation_entries` in `packages/event-bus/src/store.ts`
-- [ ] T008 Implement `EventBus` class (publish, subscribe, replay from offset) in `packages/event-bus/src/index.ts`
-- [ ] T009 Implement `StreamSession` lifecycle management (start, end, rotate after 14 days, check 80% capacity) in `packages/event-bus/src/session.ts`
-- [ ] T010 [P] Update `packages/event-schema/src/index.ts` to include expanded types: `GiftEvent`, `FollowEvent`, `RaidEvent`, `SuperChatEvent`, `StreamEvent` base with `sequenceNumber` and `moderationStatus`
-- [ ] T011 [P] Update `packages/event-schema/src/index.ts` to include WS Protocol v2 command types
-- [ ] T012 Add Event Bus integration tests verifying at-least-once delivery and offset tracking in `packages/event-bus/tests/event-bus.test.ts`
+- [x] T006 Install `better-sqlite3` and `zod` in `packages/event-bus`
+- [x] T007 Implement SQLite `store.ts` with WAL mode and tables: `events`, `sessions`, `stream_markers`, `viewer_identities`, `platform_accounts`, `reputation_entries` in `packages/event-bus/src/store.ts`
+- [x] T008 Implement `EventBus` class (publish, subscribe, replay from offset) in `packages/event-bus/src/index.ts`
+- [x] T009 Implement `StreamSession` lifecycle management (start, end, rotate after 14 days, check 80% capacity) in `packages/event-bus/src/session.ts`
+- [x] T010 [P] Update `packages/event-schema/src/index.ts` to include expanded types: `GiftEvent`, `FollowEvent`, `RaidEvent`, `SuperChatEvent`, `StreamEvent` base with `sequenceNumber` and `moderationStatus`
+- [x] T011 [P] Update `packages/event-schema/src/index.ts` to include WS Protocol v2 command types
+- [x] T012 Add Event Bus integration tests verifying at-least-once delivery and offset tracking in `packages/event-bus/tests/event-bus.test.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -52,19 +52,19 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Add circuit breaker state machine (`closed`, `open`, `half-open`) with configurable failure threshold and exponential backoff to `BaseConnector` in `packages/connector-sdk/src/index.ts`
-- [ ] T014 [P] [US1] Add health check protocol (`getHealth()` returning `connected`, `reconnecting`, `disconnected`, `error`) to `BaseConnector` in `packages/connector-sdk/src/index.ts`
-- [ ] T015 [US1] Add generic `dispatchEvent(event: StreamEvent)` method alongside existing `dispatchMessage()` in `packages/connector-sdk/src/index.ts`
-- [ ] T016 [US1] Implement `ConnectorSupervisor` class managing connector lifecycle, health monitoring, and coordinated backoff in `packages/connector-sdk/src/supervisor.ts`
-- [ ] T017 [P] [US1] Update Twitch parser to emit `GiftEvent`, `RaidEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/twitch/src/parser.ts`
-- [ ] T018 [P] [US1] Update YouTube parser to emit `SuperChatEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/youtube/src/parser.ts`
-- [ ] T019 [P] [US1] Update Kick parser to emit `GiftEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/kick/src/parser.ts`
-- [ ] T020 [P] [US1] Update TikTok parser to emit `GiftEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/tiktok/src/parser.ts`
-- [ ] T021 [US1] Replace direct `EventEmitter` pipeline with Event Bus integration in `apps/local-server/src/index.ts` — connectors publish to Event Bus, consumers subscribe
-- [ ] T022 [US1] Add session management (start session on server boot, end on graceful shutdown, detect crashed sessions on startup) in `apps/local-server/src/index.ts`
-- [ ] T023 [US1] Add `ConnectorSupervisor` initialization and health status broadcasting via WS `status_update` in `apps/local-server/src/server.ts`
-- [ ] T024 [US1] Add `stream_event` broadcast (v2 protocol) as an Event Bus consumer alongside existing v1 `chat_message` for backward compatibility in `apps/local-server/src/server.ts`
-- [ ] T025 [US1] Update `useChatFeed.ts` hook to handle `stream_event` (v2 protocol) with `sequenceNumber` and `moderationStatus` in `apps/overlay-ui/src/hooks/useChatFeed.ts`
+- [x] T013 [P] [US1] Add circuit breaker state machine (`closed`, `open`, `half-open`) with configurable failure threshold and exponential backoff to `BaseConnector` in `packages/connector-sdk/src/index.ts`
+- [x] T014 [P] [US1] Add health check protocol (`getHealth()` returning `connected`, `reconnecting`, `disconnected`, `error`) to `BaseConnector` in `packages/connector-sdk/src/index.ts`
+- [x] T015 [US1] Add generic `dispatchEvent(event: StreamEvent)` method alongside existing `dispatchMessage()` in `packages/connector-sdk/src/index.ts`
+- [x] T016 [US1] Implement `ConnectorSupervisor` class managing connector lifecycle, health monitoring, and coordinated backoff in `packages/connector-sdk/src/supervisor.ts`
+- [x] T017 [P] [US1] Update Twitch parser to emit `GiftEvent`, `RaidEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/twitch/src/parser.ts`
+- [x] T018 [P] [US1] Update YouTube parser to emit `SuperChatEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/youtube/src/parser.ts`
+- [x] T019 [P] [US1] Update Kick parser to emit `GiftEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/kick/src/parser.ts`
+- [x] T020 [P] [US1] Update TikTok parser to emit `GiftEvent`, `FollowEvent` via `dispatchEvent()` in `connectors/tiktok/src/parser.ts`
+- [x] T021 [US1] Replace direct `EventEmitter` pipeline with Event Bus integration in `apps/local-server/src/index.ts` — connectors publish to Event Bus, consumers subscribe
+- [x] T022 [US1] Add session management (start session on server boot, end on graceful shutdown, detect crashed sessions on startup) in `apps/local-server/src/index.ts`
+- [x] T023 [US1] Add `ConnectorSupervisor` initialization and health status broadcasting via WS `status_update` in `apps/local-server/src/server.ts`
+- [x] T024 [US1] Add `stream_event` broadcast (v2 protocol) as an Event Bus consumer alongside existing v1 `chat_message` for backward compatibility in `apps/local-server/src/server.ts`
+- [x] T025 [US1] Update `useChatFeed.ts` hook to handle `stream_event` (v2 protocol) with `sequenceNumber` and `moderationStatus` in `apps/overlay-ui/src/hooks/useChatFeed.ts`
 
 **Checkpoint**: US1 complete — multi-platform chat aggregation with circuit breakers and expanded events operational
 
@@ -78,18 +78,18 @@
 
 ### Implementation for User Story 2
 
-- [ ] T026 [P] [US2] Implement WS v2 command handlers for `place_marker`, `switch_view_mode`, `backup_database`, `restore_database` in `apps/local-server/src/server.ts`
-- [ ] T027 [P] [US2] Add manual SQLite database backup/restore logic (file copy) triggered by WS commands in `apps/local-server/src/server.ts`
-- [ ] T028 [P] [US2] Add stream marker persistence (write to `stream_markers` table via Event Bus store) in `apps/local-server/src/server.ts`
-- [ ] T029 [US2] Add identity config, analytics config, and plugin config sections to `apps/local-server/src/config.ts`
-- [ ] T030 [US2] Implement `ChatControls.tsx` view mode switcher component (Unified, Split, Priority, Moderator) in `apps/overlay-ui/src/components/ChatControls.tsx`
-- [ ] T031 [US2] Update `ChatFeed.tsx` to support view mode filtering (Unified merges all, Split groups by platform, Priority weighted, Moderator shows full inline actions) in `apps/overlay-ui/src/components/ChatFeed.tsx`
-- [ ] T032 [P] [US2] Update `ChatMessage.tsx` to remove any reply buttons (since reply-to-platform is deferred) and add identity/reputation indicators in `apps/overlay-ui/src/components/ChatMessage.tsx`
-- [ ] T033 [P] [US2] Implement `MarkerTimeline.tsx` stream marker visualization component in `apps/overlay-ui/src/components/MarkerTimeline.tsx`
-- [ ] T034 [US2] Implement `ThemeEditor.tsx` visual theme editor with live preview (colors, fonts, animations, border-radius) per ThemeConfiguration entity in `apps/overlay-ui/src/components/ThemeEditor.tsx`
-- [ ] T035 [US2] Implement manual DB Backup and Restore buttons in `apps/overlay-ui/src/components/SettingsPanel.tsx`
-- [ ] T036 [US2] Update `Dashboard.tsx` to include the new Theme Editor, Marker Timeline, and Settings Panel in the sidebar in `apps/overlay-ui/src/components/Dashboard.tsx`
-- [ ] T037 [US2] Integrate `obs-websocket-js` in `packages/obs-integration/src/index.ts` and automatically update Browser Source URL/dimensions when theme changes
+- [x] T026 [P] [US2] Implement WS v2 command handlers for `place_marker`, `switch_view_mode`, `backup_database`, `restore_database` in `apps/local-server/src/server.ts`
+- [x] T027 [P] [US2] Add manual SQLite database backup/restore logic (file copy) triggered by WS commands in `apps/local-server/src/server.ts`
+- [x] T028 [P] [US2] Add stream marker persistence (write to `stream_markers` table via Event Bus store) in `apps/local-server/src/server.ts`
+- [x] T029 [US2] Add identity config, analytics config, and plugin config sections to `apps/local-server/src/config.ts`
+- [x] T030 [US2] Implement `ChatControls.tsx` view mode switcher component (Unified, Split, Priority, Moderator) in `apps/overlay-ui/src/components/ChatControls.tsx`
+- [x] T031 [US2] Update `ChatFeed.tsx` to support view mode filtering (Unified merges all, Split groups by platform, Priority weighted, Moderator shows full inline actions) in `apps/overlay-ui/src/components/ChatFeed.tsx`
+- [x] T032 [P] [US2] Update `ChatMessage.tsx` to remove any reply buttons (since reply-to-platform is deferred) and add identity/reputation indicators in `apps/overlay-ui/src/components/ChatMessage.tsx`
+- [x] T033 [P] [US2] Implement `MarkerTimeline.tsx` stream marker visualization component in `apps/overlay-ui/src/components/MarkerTimeline.tsx`
+- [x] T034 [US2] Implement `ThemeEditor.tsx` visual theme editor with live preview (colors, fonts, animations, border-radius) per ThemeConfiguration entity in `apps/overlay-ui/src/components/ThemeEditor.tsx`
+- [x] T035 [US2] Implement manual DB Backup and Restore buttons in `apps/overlay-ui/src/components/SettingsPanel.tsx`
+- [x] T036 [US2] Update `Dashboard.tsx` to include the new Theme Editor, Marker Timeline, and Settings Panel in the sidebar in `apps/overlay-ui/src/components/Dashboard.tsx`
+- [x] T037 [US2] Integrate `obs-websocket-js` in `packages/obs-integration/src/index.ts` and automatically update Browser Source URL/dimensions when theme changes
 
 **Checkpoint**: US2 complete — dashboard UX enhanced with view modes, theme editing, and manual backup.
 
@@ -103,20 +103,20 @@
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] Add shadow suppression mode (`suppress` action hides from overlay, preserves on platform) to moderation pipeline in `packages/moderation-pipeline/src/index.ts`
-- [ ] T039 [US3] Implement rate limiter with raid detection (50+ identical messages within 5s triggers auto-collapse with "x50" summary) in `packages/moderation-pipeline/src/handlers/rate-limiter.ts`
-- [ ] T040 [US3] Implement shadow suppression handler (mark messages as `suppressed` in moderationStatus, emit moderation event to Event Bus) in `packages/moderation-pipeline/src/handlers/shadow-suppress.ts`
-- [ ] T041 [US3] Implement ONNX-based toxicity scoring using quantized MiniLMv2 model via `onnxruntime-node` with `@xenova/transformers` tokenization in `packages/moderation-pipeline/src/filters/toxicity.ts`. Implement download-on-demand logic and progress event broadcasting.
-- [ ] T042 [US3] Create SQLite tables for `viewer_identities`, `platform_accounts`, `reputation_entries` in identity package store (reuse Event Bus SQLite connection) in `packages/identity/src/index.ts`
-- [ ] T043 [US3] Implement `ViewerIdentity` CRUD and `PlatformAccount` linking API in `packages/identity/src/index.ts`
-- [ ] T044 [US3] Implement weighted composite reputation score computation (positive: messages, gifts, watch_time, engagement; negative: mod_actions, spam_flags) in `packages/identity/src/reputation.ts`
-- [ ] T045 [US3] Implement fuzzy-match identity suggestions using Levenshtein distance and simultaneous activity detection in `packages/identity/src/suggestions.ts`
-- [ ] T046 [US3] Add WS v2 command handlers for `link_identity` and `update_reputation_weights` in `apps/local-server/src/server.ts`
-- [ ] T047 [US3] Implement `IdentityPanel.tsx` viewer identity management UI (link accounts, view reputation, resolve conflicts) in `apps/overlay-ui/src/components/IdentityPanel.tsx`
-- [ ] T048 [US3] Implement UI to enable toxicity filtering and display download progress in `apps/overlay-ui/src/components/ModerationSettings.tsx`
-- [ ] T049 [US3] Implement `useIdentity.ts` hook for identity management state (CRUD, linking, reputation display) in `apps/overlay-ui/src/hooks/useIdentity.ts`
-- [ ] T050 [US3] Update `ChatFeed.tsx` to apply shadow-suppressed styling (hidden in overlay, visible in moderator view mode) in `apps/overlay-ui/src/components/ChatFeed.tsx`
-- [ ] T051 [US3] Add route for Identity Panel and Moderation Settings in `apps/overlay-ui/src/App.tsx` and `apps/overlay-ui/src/components/Dashboard.tsx`
+- [x] T038 [US3] Add shadow suppression mode (`suppress` action hides from overlay, preserves on platform) to moderation pipeline in `packages/moderation-pipeline/src/index.ts`
+- [x] T039 [US3] Implement rate limiter with raid detection (50+ identical messages within 5s triggers auto-collapse with "x50" summary) in `packages/moderation-pipeline/src/handlers/rate-limiter.ts`
+- [x] T040 [US3] Implement shadow suppression handler (mark messages as `suppressed` in moderationStatus, emit moderation event to Event Bus) in `packages/moderation-pipeline/src/handlers/shadow-suppress.ts`
+- [x] T041 [US3] Implement ONNX-based toxicity scoring using quantized MiniLMv2 model via `onnxruntime-node` with `@xenova/transformers` tokenization in `packages/moderation-pipeline/src/filters/toxicity.ts`. Implement download-on-demand logic and progress event broadcasting.
+- [x] T042 [US3] Create SQLite tables for `viewer_identities`, `platform_accounts`, `reputation_entries` in identity package store (reuse Event Bus SQLite connection) in `packages/identity/src/index.ts`
+- [x] T043 [US3] Implement `ViewerIdentity` CRUD and `PlatformAccount` linking API in `packages/identity/src/index.ts`
+- [x] T044 [US3] Implement weighted composite reputation score computation (positive: messages, gifts, watch_time, engagement; negative: mod_actions, spam_flags) in `packages/identity/src/reputation.ts`
+- [x] T045 [US3] Implement fuzzy-match identity suggestions using Levenshtein distance and simultaneous activity detection in `packages/identity/src/suggestions.ts`
+- [x] T046 [US3] Add WS v2 command handlers for `link_identity` and `update_reputation_weights` in `apps/local-server/src/server.ts`
+- [x] T047 [US3] Implement `IdentityPanel.tsx` viewer identity management UI (link accounts, view reputation, resolve conflicts) in `apps/overlay-ui/src/components/IdentityPanel.tsx`
+- [x] T048 [US3] Implement UI to enable toxicity filtering and display download progress in `apps/overlay-ui/src/components/ModerationSettings.tsx`
+- [x] T049 [US3] Implement `useIdentity.ts` hook for identity management state (CRUD, linking, reputation display) in `apps/overlay-ui/src/hooks/useIdentity.ts`
+- [x] T050 [US3] Update `ChatFeed.tsx` to apply shadow-suppressed styling (hidden in overlay, visible in moderator view mode) in `apps/overlay-ui/src/components/ChatFeed.tsx`
+- [x] T051 [US3] Add route for Identity Panel and Moderation Settings in `apps/overlay-ui/src/App.tsx` and `apps/overlay-ui/src/components/Dashboard.tsx`
 
 **Checkpoint**: US3 complete — moderation pipeline with shadow suppression, raid detection, on-demand toxicity scoring, and identity linking operational
 
@@ -130,13 +130,15 @@
 
 ### Implementation for User Story 4
 
-- [ ] T052 [P] [US4] Implement SQLite aggregations for session stats (messages/min, unique chatters, platform share) in `packages/analytics/src/index.ts`
-- [ ] T053 [P] [US4] Implement post-stream report generator calculating peak engagement windows based on rolling 1-minute averages in `packages/analytics/src/reports.ts`
-- [ ] T054 [P] [US4] Implement CSV and timestamped log export utilities reading from `events` table in `packages/analytics/src/export.ts`
-- [ ] T055 [US4] Add WS v2 command handlers for `get_analytics`, `export_csv`, `fetch_session_replay` in `apps/local-server/src/server.ts`
-- [ ] T056 [US4] Implement `AnalyticsPanel.tsx` displaying charts/graphs (using Recharts or Chart.js) and summary metrics in `apps/overlay-ui/src/components/AnalyticsPanel.tsx`
-- [ ] T057 [US4] Implement `SessionReplay.tsx` chat player allowing timeline scrubbing and synchronized marker display in `apps/overlay-ui/src/components/SessionReplay.tsx`
-- [ ] T058 [US4] Implement `useAnalytics.ts` hook for fetching reports and handling export downloads in `apps/overlay-ui/src/hooks/useAnalytics.ts`
+- [x] T052 [P] [US4] Implement SQLite aggregations for session stats (messages/min, unique chatters, platform share) in `packages/analytics/src/index.ts`
+- [x] T053 [P] [US4] Implement post-stream report generator calculating peak engagement windows based on rolling 1-minute averages in `packages/analytics/src/reports.ts`
+- [x] T054 [P] [US4] Implement CSV and timestamped log export utilities reading from `events` table in `packages/analytics/src/export.ts`
+- [x] T055 [US4] Add WS v2 command handlers for `get_analytics`, `export_csv`, `fetch_session_replay` in `apps/local-server/src/server.ts`
+- [x] T056 [US4] Implement `AnalyticsPanel.tsx` displaying charts/graphs (using Recharts or Chart.js) and summary metrics in `apps/overlay-ui/src/components/AnalyticsPanel.tsx`
+- [x] T057 [US4] Implement `SessionReplay.tsx` chat player allowing timeline scrubbing and synchronized marker display in `apps/overlay-ui/src/components/SessionReplay.tsx`
+- [x] T058 [US4] Implement `useAnalytics.ts` hook for fetching reports and handling export downloads in `apps/overlay-ui/src/hooks/useAnalytics.ts`
+
+**Checkpoint**: US4 complete — Session replay scrubbing, CSV/Log exports, and Recharts-based analytics dashboard are operational.
 
 **Checkpoint**: US4 complete — analytics and session replay operational
 
@@ -150,16 +152,16 @@
 
 ### Implementation for User Story 5
 
-- [ ] T059 [US5] Install `isolated-vm` in `packages/plugin-sdk`
-- [ ] T060 [US5] Implement `sandbox.ts` wrapping `isolated-vm` isolate creation, script compilation, and 128MB memory limit enforcement in `packages/plugin-sdk/src/sandbox.ts`
-- [ ] T061 [US5] Implement capability injection (e.g., exposing specific `fetch` or `fs.readFile` bindings only if capability is granted) in `packages/plugin-sdk/src/sandbox.ts`
-- [ ] T062 [P] [US5] Implement `manifest.ts` parser validating `plugin.json` schema (capabilities, entrypoint, version) in `packages/plugin-sdk/src/manifest.ts`
-- [ ] T063 [P] [US5] Implement `marketplace.ts` local registry client parsing a static JSON catalog of approved plugins in `packages/plugin-sdk/src/marketplace.ts`
-- [ ] T064 [US5] Implement PluginManager class coordinating load, capability approval, activation, and deactivation in `packages/plugin-sdk/src/index.ts`
-- [ ] T065 [US5] Wire Plugin SDK into Event Bus — inject Event Bus subscriber binding into sandbox so plugins can receive events in `apps/local-server/src/server.ts`
-- [ ] T066 [US5] Add WS v2 commands for `install_plugin`, `uninstall_plugin`, `list_plugins`, `grant_capabilities` in `apps/local-server/src/server.ts`
-- [ ] T067 [US5] Implement `PluginManagerPanel.tsx` UI showing installed plugins, marketplace tab, and capability approval modals in `apps/overlay-ui/src/components/PluginManagerPanel.tsx`
-- [ ] T068 [US5] Implement `usePlugins.ts` hook for marketplace browsing and install state in `apps/overlay-ui/src/hooks/usePlugins.ts`
+- [x] T059 [US5] Install `isolated-vm` in `packages/plugin-sdk`
+- [x] T060 [US5] Implement `sandbox.ts` wrapping `isolated-vm` isolate creation, script compilation, and 128MB memory limit enforcement in `packages/plugin-sdk/src/sandbox.ts`
+- [x] T061 [US5] Implement capability injection (e.g., exposing specific `fetch` or `fs.readFile` bindings only if capability is granted) in `packages/plugin-sdk/src/sandbox.ts`
+- [x] T062 [P] [US5] Implement `manifest.ts` parser validating `plugin.json` schema (capabilities, entrypoint, version) in `packages/plugin-sdk/src/manifest.ts`
+- [x] T063 [P] [US5] Implement `marketplace.ts` local registry client parsing a static JSON catalog of approved plugins in `packages/plugin-sdk/src/marketplace.ts`
+- [x] T064 [US5] Implement PluginManager class coordinating load, capability approval, activation, and deactivation in `packages/plugin-sdk/src/index.ts`
+- [x] T065 [US5] Wire Plugin SDK into Event Bus — inject Event Bus subscriber binding into sandbox so plugins can receive events in `apps/local-server/src/server.ts`
+- [x] T066 [US5] Add WS v2 commands for `install_plugin`, `uninstall_plugin`, `list_plugins`, `grant_capabilities` in `apps/local-server/src/server.ts`
+- [x] T067 [US5] Implement `PluginManagerPanel.tsx` UI showing installed plugins, marketplace tab, and capability approval modals in `apps/overlay-ui/src/components/PluginManagerPanel.tsx`
+- [x] T068 [US5] Implement `usePlugins.ts` hook for marketplace browsing and install state in `apps/overlay-ui/src/hooks/usePlugins.ts`
 
 **Checkpoint**: US5 complete — Sandboxed Plugin Ecosystem operational
 
@@ -173,11 +175,11 @@
 
 ### Implementation for User Story 6
 
-- [ ] T069 [US6] Setup `commander` and basic CLI entry point in `tools/streamchats-cli/src/index.ts`
-- [ ] T070 [P] [US6] Implement `create-plugin.ts` command copying boilerplate template and generating valid `plugin.json` in `tools/streamchats-cli/src/commands/create-plugin.ts`
-- [ ] T071 [P] [US6] Implement `simulate.ts` command that generates synthetic chat events at a configurable rate and publishes them to a local Event Bus instance in `tools/streamchats-cli/src/commands/simulate.ts`
-- [ ] T072 [US6] Implement `test.ts` command that runs a plugin inside the `isolated-vm` sandbox and asserts outputs in `tools/streamchats-cli/src/commands/test.ts`
-- [ ] T073 [US6] Add npm `bin` mapping in `tools/streamchats-cli/package.json` and build step
+- [x] T069 [US6] Setup `commander` and basic CLI entry point in `tools/streamchats-cli/src/index.ts`
+- [x] T070 [P] [US6] Implement `create-plugin.ts` command copying boilerplate template and generating valid `plugin.json` in `tools/streamchats-cli/src/commands/create-plugin.ts`
+- [x] T071 [P] [US6] Implement `simulate.ts` command that generates synthetic chat events at a configurable rate and publishes them to a local Event Bus instance in `tools/streamchats-cli/src/commands/simulate.ts`
+- [x] T072 [US6] Implement `test.ts` command that runs a plugin inside the `isolated-vm` sandbox and asserts outputs in `tools/streamchats-cli/src/commands/test.ts`
+- [x] T073 [US6] Add npm `bin` mapping in `tools/streamchats-cli/package.json` and build step
 
 **Checkpoint**: US6 complete — Developer CLI Toolkit operational
 
@@ -191,12 +193,12 @@
 
 ### Implementation for User Story 7
 
-- [ ] T074 [US7] Configure `src-tauri/tauri.conf.json` defining the main window (dashboard UI) and setting up the local-server as a sidecar binary in `apps/desktop/src-tauri/tauri.conf.json`
-- [ ] T075 [US7] Update `packages/local-server/package.json` to use `pkg` or `esbuild` to compile the server into a standalone binary for the sidecar
-- [ ] T076 [US7] Implement Tauri Rust `main.rs` to spawn the local-server sidecar on application launch and terminate it on exit in `apps/desktop/src-tauri/src/main.rs`
-- [ ] T077 [US7] Add global hotkey registration in Rust (for stream markers) bypassing the browser context in `apps/desktop/src-tauri/src/main.rs`
-- [ ] T078 [US7] Implement system tray icon for background operation (minimizing dashboard without closing server) in `apps/desktop/src-tauri/src/main.rs`
-- [ ] T079 [US7] Update build scripts in root `package.json` to coordinate building the UI, compiling the server binary, and running the Tauri build
+- [x] T074 [US7] Configure `src-tauri/tauri.conf.json` defining the main window (dashboard UI) and setting up the local-server as a sidecar binary in `apps/desktop/src-tauri/tauri.conf.json`
+- [x] T075 [US7] Update `packages/local-server/package.json` to use `pkg` or `esbuild` to compile the server into a standalone binary for the sidecar
+- [x] T076 [US7] Implement Tauri Rust `main.rs` to spawn the local-server sidecar on application launch and terminate it on exit in `apps/desktop/src-tauri/src/main.rs`
+- [x] T077 [US7] Add global hotkey registration in Rust (for stream markers) bypassing the browser context in `apps/desktop/src-tauri/src/main.rs`
+- [x] T078 [US7] Implement system tray icon for background operation (minimizing dashboard without closing server) in `apps/desktop/src-tauri/src/main.rs`
+- [x] T079 [US7] Update build scripts in root `package.json` to coordinate building the UI, compiling the server binary, and running the Tauri build
 
 **Checkpoint**: US7 complete — Tauri wrapper operational
 
@@ -206,10 +208,10 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T080 [P] Comprehensive documentation update (README.md, architecture diagrams)
-- [ ] T081 Code cleanup and removal of deprecated v1 EventEmitter paths
-- [ ] T082 Run quickstart.md validation to ensure developer onboarding works
-- [ ] T083 Final end-to-end manual test of all User Stories in sequence
+- [x] T080 [P] Comprehensive documentation update (README.md, architecture diagrams)
+- [x] T081 Code cleanup and removal of deprecated v1 EventEmitter paths
+- [x] T082 Run quickstart.md validation to ensure developer onboarding works
+- [x] T083 Final end-to-end manual test of all User Stories in sequence
 
 ---
 
@@ -240,3 +242,17 @@
 4. Add User Story 3 → Test independently → Deploy/Demo
 5. Add User Story 4 → Test independently → Deploy/Demo
 6. Add User Stories 5, 6, 7 → Test independently → Deploy/Demo
+
+---
+
+## Phase 11: Manual Testing Bug Fixes
+
+**Purpose**: Fix issues discovered during manual testing
+
+- [x] T084 [Bug] Themes Editor settings are not working: chat template theme is not changing based on user's request.
+- [x] T085 [Bug] Clear Chat is not working: it does not clear the recent chat history.
+- [x] T086 [Bug] Markers are not stored properly: upon F5-refresh they are deleted.
+- [x] T087 [Bug] Stream Statistics is not showing anything: total messages, unique chatters, and messages/min are empty.
+- [x] T088 [Bug] Session replay is recording from the start of the first run which is inefficient.
+- [x] T089 [Bug] Plugin autowelcomer is not doing anything after installation.
+- [x] T090 [Bug] Moderation view doesn't render inline ban/timeout buttons correctly in the overlay.

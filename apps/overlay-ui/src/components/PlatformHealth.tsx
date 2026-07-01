@@ -84,6 +84,13 @@ export function PlatformHealth({ statusUpdate, sendCommand }: PlatformHealthProp
                         Error: {connectedState.lastError}
                       </div>
                     )}
+                    {connectedState.health && (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#888' }}>
+                        <span>⚡ Latency: {connectedState.health.latencyMs}ms</span>
+                        <span>⚠️ Error Rate: {(connectedState.health.errorRate * 100).toFixed(1)}%</span>
+                        {connectedState.health.lastEventTime && <span>🕒 Last Event: {new Date(connectedState.health.lastEventTime).toLocaleTimeString()}</span>}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div style={{ fontSize: '0.85rem', color: '#aaa' }}>

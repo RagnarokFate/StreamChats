@@ -323,6 +323,8 @@ export declare const ServerConfigSchema: z.ZodObject<{
     bannedWordAction: z.ZodDefault<z.ZodEnum<["mask", "drop"]>>;
     maskCharacter: z.ZodDefault<z.ZodString>;
     spamProtectionEnabled: z.ZodDefault<z.ZodBoolean>;
+    aiToxicityEnabled: z.ZodDefault<z.ZodBoolean>;
+    aiToxicityThreshold: z.ZodDefault<z.ZodNumber>;
     platforms: z.ZodOptional<z.ZodObject<{
         twitch: z.ZodOptional<z.ZodString>;
         youtube: z.ZodOptional<z.ZodString>;
@@ -339,28 +341,68 @@ export declare const ServerConfigSchema: z.ZodObject<{
         kick?: string | undefined;
         tiktok?: string | undefined;
     }>>;
+    reputationWeights: z.ZodOptional<z.ZodObject<{
+        messages: z.ZodDefault<z.ZodNumber>;
+        gifts: z.ZodDefault<z.ZodNumber>;
+        watchTime: z.ZodDefault<z.ZodNumber>;
+        modActions: z.ZodDefault<z.ZodNumber>;
+        spamFlags: z.ZodDefault<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        messages: number;
+        gifts: number;
+        watchTime: number;
+        modActions: number;
+        spamFlags: number;
+    }, {
+        messages?: number | undefined;
+        gifts?: number | undefined;
+        watchTime?: number | undefined;
+        modActions?: number | undefined;
+        spamFlags?: number | undefined;
+    }>>;
+    pluginPermissions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>>;
 }, "strip", z.ZodTypeAny, {
     bannedWords: string[];
     bannedWordAction: "mask" | "drop";
     maskCharacter: string;
     spamProtectionEnabled: boolean;
+    aiToxicityEnabled: boolean;
+    aiToxicityThreshold: number;
     platforms?: {
         youtube?: string | undefined;
         twitch?: string | undefined;
         kick?: string | undefined;
         tiktok?: string | undefined;
     } | undefined;
+    reputationWeights?: {
+        messages: number;
+        gifts: number;
+        watchTime: number;
+        modActions: number;
+        spamFlags: number;
+    } | undefined;
+    pluginPermissions?: Record<string, string[]> | undefined;
 }, {
     bannedWords?: string[] | undefined;
     bannedWordAction?: "mask" | "drop" | undefined;
     maskCharacter?: string | undefined;
     spamProtectionEnabled?: boolean | undefined;
+    aiToxicityEnabled?: boolean | undefined;
+    aiToxicityThreshold?: number | undefined;
     platforms?: {
         youtube?: string | undefined;
         twitch?: string | undefined;
         kick?: string | undefined;
         tiktok?: string | undefined;
     } | undefined;
+    reputationWeights?: {
+        messages?: number | undefined;
+        gifts?: number | undefined;
+        watchTime?: number | undefined;
+        modActions?: number | undefined;
+        spamFlags?: number | undefined;
+    } | undefined;
+    pluginPermissions?: Record<string, string[]> | undefined;
 }>;
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;
 export declare const ConnectorStatusSchema: z.ZodEnum<["IDLE", "CONNECTING", "CONNECTED", "WAITING", "RECONNECTING", "ERROR"]>;
@@ -372,6 +414,25 @@ export declare const PlatformStatusSchema: z.ZodObject<{
     reconnectCount: z.ZodNumber;
     lastConnectedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     channelId: z.ZodString;
+    health: z.ZodOptional<z.ZodObject<{
+        platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
+        latencyMs: z.ZodNumber;
+        lastEventTime: z.ZodNullable<z.ZodString>;
+        errorRate: z.ZodNumber;
+        supportsOutbound: z.ZodBoolean;
+    }, "strip", z.ZodTypeAny, {
+        platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+        latencyMs: number;
+        lastEventTime: string | null;
+        errorRate: number;
+        supportsOutbound: boolean;
+    }, {
+        platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+        latencyMs: number;
+        lastEventTime: string | null;
+        errorRate: number;
+        supportsOutbound: boolean;
+    }>>;
 }, "strip", z.ZodTypeAny, {
     status: "IDLE" | "CONNECTING" | "CONNECTED" | "WAITING" | "RECONNECTING" | "ERROR";
     platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -379,6 +440,13 @@ export declare const PlatformStatusSchema: z.ZodObject<{
     channelId: string;
     lastError?: string | null | undefined;
     lastConnectedAt?: string | null | undefined;
+    health?: {
+        platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+        latencyMs: number;
+        lastEventTime: string | null;
+        errorRate: number;
+        supportsOutbound: boolean;
+    } | undefined;
 }, {
     status: "IDLE" | "CONNECTING" | "CONNECTED" | "WAITING" | "RECONNECTING" | "ERROR";
     platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -386,6 +454,13 @@ export declare const PlatformStatusSchema: z.ZodObject<{
     channelId: string;
     lastError?: string | null | undefined;
     lastConnectedAt?: string | null | undefined;
+    health?: {
+        platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+        latencyMs: number;
+        lastEventTime: string | null;
+        errorRate: number;
+        supportsOutbound: boolean;
+    } | undefined;
 }>;
 export type PlatformStatus = z.infer<typeof PlatformStatusSchema>;
 export declare const StreamStatisticsSchema: z.ZodObject<{
@@ -475,6 +550,25 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         reconnectCount: z.ZodNumber;
         lastConnectedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         channelId: z.ZodString;
+        health: z.ZodOptional<z.ZodObject<{
+            platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
+            latencyMs: z.ZodNumber;
+            lastEventTime: z.ZodNullable<z.ZodString>;
+            errorRate: z.ZodNumber;
+            supportsOutbound: z.ZodBoolean;
+        }, "strip", z.ZodTypeAny, {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        }, {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        }>>;
     }, "strip", z.ZodTypeAny, {
         status: "IDLE" | "CONNECTING" | "CONNECTED" | "WAITING" | "RECONNECTING" | "ERROR";
         platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -482,6 +576,13 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         channelId: string;
         lastError?: string | null | undefined;
         lastConnectedAt?: string | null | undefined;
+        health?: {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        } | undefined;
     }, {
         status: "IDLE" | "CONNECTING" | "CONNECTED" | "WAITING" | "RECONNECTING" | "ERROR";
         platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -489,6 +590,13 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         channelId: string;
         lastError?: string | null | undefined;
         lastConnectedAt?: string | null | undefined;
+        health?: {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        } | undefined;
     }>, "many">;
     statistics: z.ZodArray<z.ZodObject<{
         platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
@@ -511,6 +619,8 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         bannedWordAction: z.ZodDefault<z.ZodEnum<["mask", "drop"]>>;
         maskCharacter: z.ZodDefault<z.ZodString>;
         spamProtectionEnabled: z.ZodDefault<z.ZodBoolean>;
+        aiToxicityEnabled: z.ZodDefault<z.ZodBoolean>;
+        aiToxicityThreshold: z.ZodDefault<z.ZodNumber>;
         platforms: z.ZodOptional<z.ZodObject<{
             twitch: z.ZodOptional<z.ZodString>;
             youtube: z.ZodOptional<z.ZodString>;
@@ -527,28 +637,68 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
             kick?: string | undefined;
             tiktok?: string | undefined;
         }>>;
+        reputationWeights: z.ZodOptional<z.ZodObject<{
+            messages: z.ZodDefault<z.ZodNumber>;
+            gifts: z.ZodDefault<z.ZodNumber>;
+            watchTime: z.ZodDefault<z.ZodNumber>;
+            modActions: z.ZodDefault<z.ZodNumber>;
+            spamFlags: z.ZodDefault<z.ZodNumber>;
+        }, "strip", z.ZodTypeAny, {
+            messages: number;
+            gifts: number;
+            watchTime: number;
+            modActions: number;
+            spamFlags: number;
+        }, {
+            messages?: number | undefined;
+            gifts?: number | undefined;
+            watchTime?: number | undefined;
+            modActions?: number | undefined;
+            spamFlags?: number | undefined;
+        }>>;
+        pluginPermissions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>>;
     }, "strip", z.ZodTypeAny, {
         bannedWords: string[];
         bannedWordAction: "mask" | "drop";
         maskCharacter: string;
         spamProtectionEnabled: boolean;
+        aiToxicityEnabled: boolean;
+        aiToxicityThreshold: number;
         platforms?: {
             youtube?: string | undefined;
             twitch?: string | undefined;
             kick?: string | undefined;
             tiktok?: string | undefined;
         } | undefined;
+        reputationWeights?: {
+            messages: number;
+            gifts: number;
+            watchTime: number;
+            modActions: number;
+            spamFlags: number;
+        } | undefined;
+        pluginPermissions?: Record<string, string[]> | undefined;
     }, {
         bannedWords?: string[] | undefined;
         bannedWordAction?: "mask" | "drop" | undefined;
         maskCharacter?: string | undefined;
         spamProtectionEnabled?: boolean | undefined;
+        aiToxicityEnabled?: boolean | undefined;
+        aiToxicityThreshold?: number | undefined;
         platforms?: {
             youtube?: string | undefined;
             twitch?: string | undefined;
             kick?: string | undefined;
             tiktok?: string | undefined;
         } | undefined;
+        reputationWeights?: {
+            messages?: number | undefined;
+            gifts?: number | undefined;
+            watchTime?: number | undefined;
+            modActions?: number | undefined;
+            spamFlags?: number | undefined;
+        } | undefined;
+        pluginPermissions?: Record<string, string[]> | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     type: "status_update";
@@ -559,6 +709,13 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         channelId: string;
         lastError?: string | null | undefined;
         lastConnectedAt?: string | null | undefined;
+        health?: {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        } | undefined;
     }[];
     statistics: {
         platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -571,12 +728,22 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         bannedWordAction: "mask" | "drop";
         maskCharacter: string;
         spamProtectionEnabled: boolean;
+        aiToxicityEnabled: boolean;
+        aiToxicityThreshold: number;
         platforms?: {
             youtube?: string | undefined;
             twitch?: string | undefined;
             kick?: string | undefined;
             tiktok?: string | undefined;
         } | undefined;
+        reputationWeights?: {
+            messages: number;
+            gifts: number;
+            watchTime: number;
+            modActions: number;
+            spamFlags: number;
+        } | undefined;
+        pluginPermissions?: Record<string, string[]> | undefined;
     };
 }, {
     type: "status_update";
@@ -587,6 +754,13 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         channelId: string;
         lastError?: string | null | undefined;
         lastConnectedAt?: string | null | undefined;
+        health?: {
+            platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
+            latencyMs: number;
+            lastEventTime: string | null;
+            errorRate: number;
+            supportsOutbound: boolean;
+        } | undefined;
     }[];
     statistics: {
         platform: "youtube" | "twitch" | "kick" | "tiktok" | "custom";
@@ -599,12 +773,22 @@ export declare const StatusUpdateEventSchema: z.ZodObject<{
         bannedWordAction?: "mask" | "drop" | undefined;
         maskCharacter?: string | undefined;
         spamProtectionEnabled?: boolean | undefined;
+        aiToxicityEnabled?: boolean | undefined;
+        aiToxicityThreshold?: number | undefined;
         platforms?: {
             youtube?: string | undefined;
             twitch?: string | undefined;
             kick?: string | undefined;
             tiktok?: string | undefined;
         } | undefined;
+        reputationWeights?: {
+            messages?: number | undefined;
+            gifts?: number | undefined;
+            watchTime?: number | undefined;
+            modActions?: number | undefined;
+            spamFlags?: number | undefined;
+        } | undefined;
+        pluginPermissions?: Record<string, string[]> | undefined;
     };
 }>;
 export type StatusUpdateEvent = z.infer<typeof StatusUpdateEventSchema>;
@@ -721,6 +905,8 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
             bannedWordAction: z.ZodOptional<z.ZodDefault<z.ZodEnum<["mask", "drop"]>>>;
             maskCharacter: z.ZodOptional<z.ZodDefault<z.ZodString>>;
             spamProtectionEnabled: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            aiToxicityEnabled: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            aiToxicityThreshold: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             platforms: z.ZodOptional<z.ZodOptional<z.ZodObject<{
                 twitch: z.ZodOptional<z.ZodString>;
                 youtube: z.ZodOptional<z.ZodString>;
@@ -737,28 +923,68 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             }>>>;
+            reputationWeights: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                messages: z.ZodDefault<z.ZodNumber>;
+                gifts: z.ZodDefault<z.ZodNumber>;
+                watchTime: z.ZodDefault<z.ZodNumber>;
+                modActions: z.ZodDefault<z.ZodNumber>;
+                spamFlags: z.ZodDefault<z.ZodNumber>;
+            }, "strip", z.ZodTypeAny, {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            }, {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            }>>>;
+            pluginPermissions: z.ZodOptional<z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>>>;
         }, "strip", z.ZodTypeAny, {
             bannedWords?: string[] | undefined;
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         }, {
             bannedWords?: string[] | undefined;
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         }>;
     }, "strip", z.ZodTypeAny, {
         config: {
@@ -766,12 +992,22 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     }, {
         config: {
@@ -779,12 +1015,22 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     }>;
 }, "strip", z.ZodTypeAny, {
@@ -796,12 +1042,22 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     };
 }, {
@@ -813,12 +1069,22 @@ export declare const CommandEventSchema: z.ZodDiscriminatedUnion<"action", [z.Zo
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     };
 }>, z.ZodObject<{
@@ -2172,22 +2438,27 @@ export declare const PlaceMarkerCommandSchema: z.ZodObject<{
     type: z.ZodLiteral<"command">;
     action: z.ZodLiteral<"place_marker">;
     payload: z.ZodObject<{
+        markerId: z.ZodOptional<z.ZodString>;
         label: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
+        markerId?: string | undefined;
         label?: string | undefined;
     }, {
+        markerId?: string | undefined;
         label?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     type: "command";
     action: "place_marker";
     payload: {
+        markerId?: string | undefined;
         label?: string | undefined;
     };
 }, {
     type: "command";
     action: "place_marker";
     payload: {
+        markerId?: string | undefined;
         label?: string | undefined;
     };
 }>;
@@ -2427,6 +2698,125 @@ export declare const ManagePluginCommandSchema: z.ZodObject<{
     };
 }>;
 export type ManagePluginCommand = z.infer<typeof ManagePluginCommandSchema>;
+export declare const GetMarketplaceCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_marketplace">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_marketplace";
+    payload: {};
+}, {
+    type: "command";
+    action: "get_marketplace";
+    payload: {};
+}>;
+export type GetMarketplaceCommand = z.infer<typeof GetMarketplaceCommandSchema>;
+export declare const ListPluginsCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"list_plugins">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "list_plugins";
+    payload: {};
+}, {
+    type: "command";
+    action: "list_plugins";
+    payload: {};
+}>;
+export type ListPluginsCommand = z.infer<typeof ListPluginsCommandSchema>;
+export declare const GrantPluginCapabilitiesCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"grant_plugin_capabilities">;
+    payload: z.ZodObject<{
+        pluginId: z.ZodString;
+        capabilities: z.ZodArray<z.ZodString, "many">;
+    }, "strip", z.ZodTypeAny, {
+        pluginId: string;
+        capabilities: string[];
+    }, {
+        pluginId: string;
+        capabilities: string[];
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "grant_plugin_capabilities";
+    payload: {
+        pluginId: string;
+        capabilities: string[];
+    };
+}, {
+    type: "command";
+    action: "grant_plugin_capabilities";
+    payload: {
+        pluginId: string;
+        capabilities: string[];
+    };
+}>;
+export type GrantPluginCapabilitiesCommand = z.infer<typeof GrantPluginCapabilitiesCommandSchema>;
+export declare const DeleteMarkerCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"delete_marker">;
+    payload: z.ZodObject<{
+        markerId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        markerId: string;
+    }, {
+        markerId: string;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "delete_marker";
+    payload: {
+        markerId: string;
+    };
+}, {
+    type: "command";
+    action: "delete_marker";
+    payload: {
+        markerId: string;
+    };
+}>;
+export type DeleteMarkerCommand = z.infer<typeof DeleteMarkerCommandSchema>;
+export declare const DeleteSessionCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"delete_session">;
+    payload: z.ZodObject<{
+        sessionId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        sessionId: string;
+    }, {
+        sessionId: string;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "delete_session";
+    payload: {
+        sessionId: string;
+    };
+}, {
+    type: "command";
+    action: "delete_session";
+    payload: {
+        sessionId: string;
+    };
+}>;
+export type DeleteSessionCommand = z.infer<typeof DeleteSessionCommandSchema>;
+export declare const GetSessionsCommandSchema: z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_sessions">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_sessions";
+    payload: {};
+}, {
+    type: "command";
+    action: "get_sessions";
+    payload: {};
+}>;
+export type GetSessionsCommand = z.infer<typeof GetSessionsCommandSchema>;
 export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.ZodObject<{
     type: z.ZodLiteral<"command">;
     action: z.ZodLiteral<"clear_chat">;
@@ -2540,6 +2930,8 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
             bannedWordAction: z.ZodOptional<z.ZodDefault<z.ZodEnum<["mask", "drop"]>>>;
             maskCharacter: z.ZodOptional<z.ZodDefault<z.ZodString>>;
             spamProtectionEnabled: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            aiToxicityEnabled: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            aiToxicityThreshold: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             platforms: z.ZodOptional<z.ZodOptional<z.ZodObject<{
                 twitch: z.ZodOptional<z.ZodString>;
                 youtube: z.ZodOptional<z.ZodString>;
@@ -2556,28 +2948,68 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             }>>>;
+            reputationWeights: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                messages: z.ZodDefault<z.ZodNumber>;
+                gifts: z.ZodDefault<z.ZodNumber>;
+                watchTime: z.ZodDefault<z.ZodNumber>;
+                modActions: z.ZodDefault<z.ZodNumber>;
+                spamFlags: z.ZodDefault<z.ZodNumber>;
+            }, "strip", z.ZodTypeAny, {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            }, {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            }>>>;
+            pluginPermissions: z.ZodOptional<z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>>>;
         }, "strip", z.ZodTypeAny, {
             bannedWords?: string[] | undefined;
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         }, {
             bannedWords?: string[] | undefined;
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         }>;
     }, "strip", z.ZodTypeAny, {
         config: {
@@ -2585,12 +3017,22 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     }, {
         config: {
@@ -2598,12 +3040,22 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     }>;
 }, "strip", z.ZodTypeAny, {
@@ -2615,12 +3067,22 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages: number;
+                gifts: number;
+                watchTime: number;
+                modActions: number;
+                spamFlags: number;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     };
 }, {
@@ -2632,12 +3094,22 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
             bannedWordAction?: "mask" | "drop" | undefined;
             maskCharacter?: string | undefined;
             spamProtectionEnabled?: boolean | undefined;
+            aiToxicityEnabled?: boolean | undefined;
+            aiToxicityThreshold?: number | undefined;
             platforms?: {
                 youtube?: string | undefined;
                 twitch?: string | undefined;
                 kick?: string | undefined;
                 tiktok?: string | undefined;
             } | undefined;
+            reputationWeights?: {
+                messages?: number | undefined;
+                gifts?: number | undefined;
+                watchTime?: number | undefined;
+                modActions?: number | undefined;
+                spamFlags?: number | undefined;
+            } | undefined;
+            pluginPermissions?: Record<string, string[]> | undefined;
         };
     };
 }>, z.ZodObject<{
@@ -2710,22 +3182,27 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
     type: z.ZodLiteral<"command">;
     action: z.ZodLiteral<"place_marker">;
     payload: z.ZodObject<{
+        markerId: z.ZodOptional<z.ZodString>;
         label: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
+        markerId?: string | undefined;
         label?: string | undefined;
     }, {
+        markerId?: string | undefined;
         label?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     type: "command";
     action: "place_marker";
     payload: {
+        markerId?: string | undefined;
         label?: string | undefined;
     };
 }, {
     type: "command";
     action: "place_marker";
     payload: {
+        markerId?: string | undefined;
         label?: string | undefined;
     };
 }>, z.ZodObject<{
@@ -2951,6 +3428,149 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
     };
 }>, z.ZodObject<{
     type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_marketplace">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_marketplace";
+    payload: {};
+}, {
+    type: "command";
+    action: "get_marketplace";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"list_plugins">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "list_plugins";
+    payload: {};
+}, {
+    type: "command";
+    action: "list_plugins";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"grant_plugin_capabilities">;
+    payload: z.ZodObject<{
+        pluginId: z.ZodString;
+        capabilities: z.ZodArray<z.ZodString, "many">;
+    }, "strip", z.ZodTypeAny, {
+        pluginId: string;
+        capabilities: string[];
+    }, {
+        pluginId: string;
+        capabilities: string[];
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "grant_plugin_capabilities";
+    payload: {
+        pluginId: string;
+        capabilities: string[];
+    };
+}, {
+    type: "command";
+    action: "grant_plugin_capabilities";
+    payload: {
+        pluginId: string;
+        capabilities: string[];
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"delete_marker">;
+    payload: z.ZodObject<{
+        markerId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        markerId: string;
+    }, {
+        markerId: string;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "delete_marker";
+    payload: {
+        markerId: string;
+    };
+}, {
+    type: "command";
+    action: "delete_marker";
+    payload: {
+        markerId: string;
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"delete_session">;
+    payload: z.ZodObject<{
+        sessionId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        sessionId: string;
+    }, {
+        sessionId: string;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "delete_session";
+    payload: {
+        sessionId: string;
+    };
+}, {
+    type: "command";
+    action: "delete_session";
+    payload: {
+        sessionId: string;
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_sessions">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_sessions";
+    payload: {};
+}, {
+    type: "command";
+    action: "get_sessions";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"backup_database">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "backup_database";
+    payload: {};
+}, {
+    type: "command";
+    action: "backup_database";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"restore_database">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "restore_database";
+    payload: {};
+}, {
+    type: "command";
+    action: "restore_database";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_identities">;
+    payload: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_identities";
+    payload: {};
+}, {
+    type: "command";
+    action: "get_identities";
+    payload: {};
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
     action: z.ZodLiteral<"manage_platform">;
     payload: z.ZodObject<{
         platform: z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>;
@@ -3017,6 +3637,87 @@ export declare const CommandEventV2Schema: z.ZodDiscriminatedUnion<"action", [z.
         url?: string | undefined;
         password?: string | undefined;
         sceneName?: string | undefined;
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"get_markers">;
+    payload: z.ZodObject<{
+        sessionId: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        sessionId?: string | undefined;
+    }, {
+        sessionId?: string | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "get_markers";
+    payload: {
+        sessionId?: string | undefined;
+    };
+}, {
+    type: "command";
+    action: "get_markers";
+    payload: {
+        sessionId?: string | undefined;
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"timeout">;
+    payload: z.ZodObject<{
+        userId: z.ZodString;
+        duration: z.ZodOptional<z.ZodNumber>;
+        platform: z.ZodOptional<z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>>;
+    }, "strip", z.ZodTypeAny, {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+        duration?: number | undefined;
+    }, {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+        duration?: number | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "timeout";
+    payload: {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+        duration?: number | undefined;
+    };
+}, {
+    type: "command";
+    action: "timeout";
+    payload: {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+        duration?: number | undefined;
+    };
+}>, z.ZodObject<{
+    type: z.ZodLiteral<"command">;
+    action: z.ZodLiteral<"ban">;
+    payload: z.ZodObject<{
+        userId: z.ZodString;
+        platform: z.ZodOptional<z.ZodEnum<["youtube", "twitch", "kick", "tiktok", "custom"]>>;
+    }, "strip", z.ZodTypeAny, {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+    }, {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    type: "command";
+    action: "ban";
+    payload: {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
+    };
+}, {
+    type: "command";
+    action: "ban";
+    payload: {
+        userId: string;
+        platform?: "youtube" | "twitch" | "kick" | "tiktok" | "custom" | undefined;
     };
 }>]>;
 export type CommandEventV2 = z.infer<typeof CommandEventV2Schema>;
@@ -3891,14 +4592,14 @@ export declare const StreamMarkerSchema: z.ZodObject<{
     timestamp: string;
     sequenceNumber: number | null;
     sessionId: string;
-    label: string | null;
     markerId: string;
+    label: string | null;
 }, {
     timestamp: string;
     sequenceNumber: number | null;
     sessionId: string;
-    label: string | null;
     markerId: string;
+    label: string | null;
 }>;
 export type StreamMarker = z.infer<typeof StreamMarkerSchema>;
 export declare const ConnectorHealthSchema: z.ZodObject<{

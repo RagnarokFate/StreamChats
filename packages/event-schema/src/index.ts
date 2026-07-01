@@ -85,12 +85,22 @@ export const ServerConfigSchema = z.object({
   bannedWordAction: z.enum(['mask', 'drop']).default('mask'),
   maskCharacter: z.string().default('*'),
   spamProtectionEnabled: z.boolean().default(true),
+  aiToxicityEnabled: z.boolean().default(false),
+  aiToxicityThreshold: z.number().min(0).max(1).default(0.8),
   platforms: z.object({
     twitch: z.string().optional(),
     youtube: z.string().optional(),
     kick: z.string().optional(),
     tiktok: z.string().optional(),
   }).optional(),
+  reputationWeights: z.object({
+    messages: z.number().default(0.01),
+    gifts: z.number().default(0.5),
+    watchTime: z.number().default(0.005),
+    modActions: z.number().default(-2.0),
+    spamFlags: z.number().default(-1.0),
+  }).optional(),
+  pluginPermissions: z.record(z.string(), z.array(z.string())).optional(),
 });
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;
 
@@ -104,6 +114,13 @@ export const PlatformStatusSchema = z.object({
   reconnectCount: z.number(),
   lastConnectedAt: z.string().nullable().optional(),
   channelId: z.string(),
+  health: z.object({
+    platform: PlatformSchema,
+    latencyMs: z.number(),
+    lastEventTime: z.string().datetime().nullable(),
+    errorRate: z.number().min(0).max(1),
+    supportsOutbound: z.boolean(),
+  }).optional(),
 });
 export type PlatformStatus = z.infer<typeof PlatformStatusSchema>;
 
@@ -315,6 +332,7 @@ export const PlaceMarkerCommandSchema = z.object({
   type: z.literal('command'),
   action: z.literal('place_marker'),
   payload: z.object({
+    markerId: z.string().optional(),
     label: z.string().optional(),
   }),
 });
@@ -394,6 +412,57 @@ export const ManagePluginCommandSchema = z.object({
 });
 export type ManagePluginCommand = z.infer<typeof ManagePluginCommandSchema>;
 
+
+
+export const GetMarketplaceCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('get_marketplace'),
+  payload: z.object({}),
+});
+export type GetMarketplaceCommand = z.infer<typeof GetMarketplaceCommandSchema>;
+
+export const ListPluginsCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('list_plugins'),
+  payload: z.object({}),
+});
+export type ListPluginsCommand = z.infer<typeof ListPluginsCommandSchema>;
+
+export const GrantPluginCapabilitiesCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('grant_plugin_capabilities'),
+  payload: z.object({
+    pluginId: z.string(),
+    capabilities: z.array(z.string()),
+  }),
+});
+export type GrantPluginCapabilitiesCommand = z.infer<typeof GrantPluginCapabilitiesCommandSchema>;
+
+export const DeleteMarkerCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('delete_marker'),
+  payload: z.object({
+    markerId: z.string(),
+  }),
+});
+export type DeleteMarkerCommand = z.infer<typeof DeleteMarkerCommandSchema>;
+
+export const DeleteSessionCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('delete_session'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+  }),
+});
+export type DeleteSessionCommand = z.infer<typeof DeleteSessionCommandSchema>;
+
+export const GetSessionsCommandSchema = z.object({
+  type: z.literal('command'),
+  action: z.literal('get_sessions'),
+  payload: z.object({}),
+});
+export type GetSessionsCommand = z.infer<typeof GetSessionsCommandSchema>;
+
 // Combined v2 command schema (extends v1 discriminated union)
 export const CommandEventV2Schema = z.discriminatedUnion('action', [
   // v1 commands (preserved)
@@ -437,6 +506,27 @@ export const CommandEventV2Schema = z.discriminatedUnion('action', [
   ExportSessionCommandSchema,
   RequestAnalyticsCommandSchema,
   ManagePluginCommandSchema,
+  GetMarketplaceCommandSchema,
+  ListPluginsCommandSchema,
+  GrantPluginCapabilitiesCommandSchema,
+  DeleteMarkerCommandSchema,
+  DeleteSessionCommandSchema,
+  GetSessionsCommandSchema,
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('backup_database'),
+    payload: z.object({}),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('restore_database'),
+    payload: z.object({}),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('get_identities'),
+    payload: z.object({}),
+  }),
   z.object({
     type: z.literal('command'),
     action: z.literal('manage_platform'),
@@ -454,6 +544,30 @@ export const CommandEventV2Schema = z.discriminatedUnion('action', [
       url: z.string().optional(),
       password: z.string().optional(),
       sceneName: z.string().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('get_markers'),
+    payload: z.object({
+      sessionId: z.string().uuid().optional()
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('timeout'),
+    payload: z.object({
+      userId: z.string(),
+      duration: z.number().optional(),
+      platform: PlatformSchema.optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('command'),
+    action: z.literal('ban'),
+    payload: z.object({
+      userId: z.string(),
+      platform: PlatformSchema.optional(),
     }),
   }),
 ]);
